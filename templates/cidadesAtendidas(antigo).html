@@ -1,0 +1,105 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Nortecargas - Cidades Atendidas</title>
+
+    <!-- Bootstrap -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css" rel="stylesheet" integrity="sha384-1BmE4kWBq78iYhFldvKuhfTAU6auU8tT94WrHftjDbrCEXSU1oBoqyl2QvZ6jIW3" crossorigin="anonymous">
+    <!-- Font Awesome -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css" integrity="sha512-SnH5WK+bZxgPHs44uWIX+LLJAJ9/2PkPKZ5QiAj6Ta86w+fsb2TkcmfRyVX3pBnMFcV7oQPJkl9QevSCWr3W6A==" crossorigin="anonymous" referrerpolicy="no-referrer" />
+
+    <!-- Themify -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/themify-icons/0.1.2/css/themify-icons.css">
+
+    <!-- Meus Estilos -->
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+
+    <!-- JsPdf -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+  
+    <!-- Sweet Alert -->
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+  
+    <!-- Tippy.js -->
+    <link rel="stylesheet" href="https://unpkg.com/tippy.js@6/dist/tippy.css">
+    <script src="https://unpkg.com/popper.js@1"></script>
+    <script src="https://unpkg.com/tippy.js@5"></script>
+
+  <style>
+    /* Loader Styles */
+    #loader {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background-color: rgba(255, 255, 255, 0.9);
+      display: flex; /* Mostra o loader por padrão */
+      flex-direction: column; /* Alinha elementos na vertical */
+      align-items: center;
+      justify-content: center;
+      z-index: 9999;
+    }
+
+    .progress {
+      height: 30px; /* Altura ajustada */
+      width: 80%; /* Largura da barra */
+      margin: 0 auto;
+    }
+  </style>
+</head>
+<body>
+  <!-- Loader -->
+  <div id="loader" class="d-none text-center">
+      <!-- Spinner de carregamento -->
+      <div class="spinner-border text-primary" role="status">
+      <span class="visually-hidden">Carregando...</span>
+      </div>
+
+      <!-- Mensagem de carregamento abaixo -->
+      <span class="mt-3 d-block" id="mensagemDeCarga" style="font-size: 16px;">
+      Buscando, por favor aguarde...
+      </span>
+  </div>
+
+  <!-- Page Content -->
+  <nav class="navbar navbar-expand-sm bg-dark"  id="navbarCidadesAtendidas">
+
+  </nav>
+  
+  <div class="container-fluid row">
+    <h1>Cidades Atendidas</h1>
+    <div class="col-sm-12 mt-4 mb-4">
+      <div class="form-floating mb-3">
+        <input type="text" class="form-control" id="inptBuscaCidade" placeholder="Digite o nome completo ou parte do nome da cidade">
+        <label for="inptBuscaCidade">Digite o nome completo ou parte do nome da cidade asfsdafadsf</label>
+      </div>
+    </div>
+
+    <div id="navCidadesAtendidas">
+    </div>
+
+    <div class="sol-sm-12">
+      <table class="table table-sm table-striped ">
+        <thead>
+          <tr>
+            <th scope="col">Cidade</th>
+            <th scope="col">Filial Destino</th>
+          </tr>
+        </thead>
+        <tbody id="tbodyCidadesAtendidas">
+        </tbody>
+      </table>
+    </div>
+
+  </div>
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js" integrity="sha384-ka7Sk0Gln4gmtz2MlQnikT1wXgYsOg+OMhuP+IlRH9sENBO0LRn5q+8nbTov4+1p" crossorigin="anonymous"></script>
+  <script src="{{ url_for('static', filename='js/populaTbody.js') }}"></script>
+  <script src="{{ url_for('static', filename='js/utils.js') }}"></script>
+  <script src="{{ url_for('static', filename='js/cidadesAtendidas.js') }}"></script>
+  <script src="{{ url_for('static', filename='js/renderNavbar.js') }}"></script>
+  <script src="{{ url_for('static', filename='js/cidadesAtendidasJson.js') }}"></script>
+</body>
+</html>

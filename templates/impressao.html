@@ -1,0 +1,97 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Generate PDF with jsPDF</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css" rel="stylesheet" integrity="sha384-1BmE4kWBq78iYhFldvKuhfTAU6auU8tT94WrHftjDbrCEXSU1oBoqyl2QvZ6jIW3" crossorigin="anonymous">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css" integrity="sha512-SnH5WK+bZxgPHs44uWIX+LLJAJ9/2PkPKZ5QiAj6Ta86w+fsb2TkcmfRyVX3pBnMFcV7oQPJkl9QevSCWr3W6A==" crossorigin="anonymous" referrerpolicy="no-referrer" />
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/themify-icons/0.1.2/css/themify-icons.css">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+  
+    <!-- JsPdf -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+  
+    <!-- Sweet Alert -->
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+  
+    <!-- Tippy.js -->
+    <link rel="stylesheet" href="https://unpkg.com/tippy.js@6/dist/tippy.css">
+    <script src="https://unpkg.com/popper.js@1"></script>
+    <script src="https://unpkg.com/tippy.js@5"></script>
+</head>
+<body>
+    <button id="generatePdf">Generate PDF</button>
+
+    <script>
+        const { jsPDF } = window.jspdf;
+
+        document.getElementById('generatePdf').addEventListener('click', function() {
+            const dados = {
+                pdf_filename: 'comunicacao_interna.pdf',
+                ci_num: '1234',
+                data: '2024-05-22',
+                percurso: 'Guarulhos - São Paulo',
+                destinatario: 'Fulano de Tal',
+                manifesto_numero: '5678',
+                valor_frete: 'R$ 1000,00',
+                motorista: 'José da Silva',
+                isca_1: 'Isca 1',
+                isca_2: 'Isca 2',
+                observacao: 'Sem observações'
+            };
+
+            const doc = new jsPDF();
+            const pageWidth = doc.internal.pageSize.getWidth();
+            const centerX = pageWidth / 2;
+
+            // Logo
+            doc.addImage("{{ url_for('static', filename='logonorte.jpg') }}", 'JPEG', 10, 10, 50, 15);
+
+            // Empresa e Detalhes
+            doc.setFontSize(12);
+            doc.text('SERAFIM TRANSPORTE DE CARGAS LTDA', centerX, 40, { align: 'center' });
+            doc.setFontSize(10);
+            doc.text('Rua: Nova Veneza, 172 Cumbica – Guarulhos-SP', centerX, 45, { align: 'center' });
+            doc.text('Tel(11)2481-9121/2481-9697/2412-4886/2412-3927', centerX, 50, { align: 'center' });
+
+            doc.setFontSize(12);
+            doc.text(`Comunicação Interna Nº ${dados.ci_num}`, centerX, 70, { align: 'center' });
+            doc.setFontSize(10);
+            doc.text(`Data: ${dados.data} Percurso: ${dados.percurso}`, centerX, 75, { align: 'center' });
+
+            doc.setFontSize(12);
+            doc.text(`${dados.destinatario},`, 20, 90);
+            doc.text(`Estamos enviando o manifesto de transporte de cargas nº ${dados.manifesto_numero}. Este manifesto inclui conhecimentos de frete.`, 20, 100);
+            doc.text(`De acordo com este manifesto, solicitamos o pagamento de ${dados.valor_frete} ao motorista ${dados.motorista}, referente à Ordem de Pagamento.`, 20, 110);
+
+            if (dados.isca_2 !== '') {
+                doc.text(`Além disso, incluímos as seguintes iscas de monitoramento: ${dados.isca_1} e ${dados.isca_2}.`, 20, 120);
+            } else {
+                doc.text(`Também incluímos a seguinte isca de monitoramento: ${dados.isca_1}.`, 20, 120);
+            }
+
+            if (dados.observacao !== '') {
+                doc.setFontSize(12);
+                doc.text(`Observações:`, 20, 140);
+                doc.setFontSize(10);
+                doc.text(dados.observacao, 20, 150);
+            }
+
+            // Assinaturas
+            doc.setFontSize(12);
+            doc.text('Assinatura da Empresa', 60, 200);
+            doc.text('Assinatura do Motorista', 140, 200);
+
+            doc.setFontSize(10);
+            doc.text('SERAFIM TRANSPORTE DE CARGAS LTDA', 60, 220);
+            doc.text(dados.motorista, 140, 220);
+
+            // Abrir o PDF em uma nova aba
+            const pdfOutput = doc.output('blob');
+            const url = URL.createObjectURL(pdfOutput);
+            window.open(url);
+        });
+    </script>
+</body>
+</html>
