@@ -27,6 +27,7 @@ def _configurar_driver(download_dir):
     options.add_argument("--disable-gpu")
     options.add_argument("--no-sandbox")
     options.add_argument("--disable-dev-shm-usage")
+    options.binary_location = "/usr/bin/google-chrome"  
     prefs = {
         "download.default_directory": download_dir,
         "download.prompt_for_download": False,

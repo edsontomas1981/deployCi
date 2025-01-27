@@ -1,4 +1,4 @@
-const BASEURL = "http://192.168.15.42:5000";
+const BASEURL = "http://54.91.211.206/";
 
 class ApiService {
     constructor(baseUrl) {

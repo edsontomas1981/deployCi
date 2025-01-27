@@ -16,7 +16,7 @@ app = Flask(__name__, template_folder='templates', static_folder='static')
 # Permitir CORS para qualquer origem
 # CORS(app, resources={r"/*": {"origins": "*"}})
 
-DATABASE = '/home/edson/Documentos/comunicacaoInterna/backend/bd_norte.db'
+DATABASE = 'bd_norte.db'
 
 @app.route('/', methods=['GET'])
 def index():
