@@ -24,7 +24,7 @@ def index():
 
 @app.route('/novoInicio', methods=['GET'])
 def newIndex():
-    return render_template('index.html')
+    return render_template('novo.html')
 
 @app.route('/template', methods=['GET'])
 def template():
@@ -249,6 +249,42 @@ def baixar_ctes_lote():
     except Exception as e:
         print(f"Erro ao baixar os CTEs: {e}")
         return jsonify({'status': 'Erro durante o processo'}), 500
+
+# Rota para receber mensagens da API do WhatsApp
+@app.route('/webhook', methods=['POST', 'GET'])
+def webhook():
+    # Verifica se é uma requisição de verificação do webhook
+    if request.method == 'GET':
+        # Parâmetros fornecidos pelo WhatsApp
+        mode = request.args.get('hub.mode')
+        token = request.args.get('hub.verify_token')
+        challenge = request.args.get('hub.challenge')
+
+        # Verifica se o token de verificação é válido
+        VERIFY_TOKEN = "EAANxmkzeEj8BOZC5K3TNDIpuFG60P5CP008kyH7YZBBAsqWNro60pmKgNy4NfWHFfkEnNO760krXu73Fu8h6NW7O7j58h5A8m9mHTOt4yLOvXGgRDn1FHpFd2olIwEbbxHZBZBylS85D7dPrIuLCUtopDNPZCRiD4JwWNAAPiicZAIBbfHCpZArIjZBEeS3HfVSTHmc7wayopaNGZCJZBSp7nYLy0ZCfFCfZCSZAj7FAZD"  # Substitua pelo token configurado no WhatsApp
+        if mode == "subscribe" and token == VERIFY_TOKEN:
+            print("Webhook verificado com sucesso!")
+            return challenge, 200
+        else:
+            return "Token de verificação inválido", 403
+
+    # Processa mensagens recebidas (POST)
+    if request.method == 'POST':
+        data = request.get_json()  # Obtém o JSON enviado pela API
+        print("Mensagem recebida:", data)
+
+        # Exemplo: Extrair informações da mensagem
+        if 'entry' in data and len(data['entry']) > 0:
+            for entry in data['entry']:
+                for change in entry.get('changes', []):
+                    if change['value']['messaging_product'] == 'whatsapp':
+                        messages = change['value'].get('messages', [])
+                        for message in messages:
+                            phone_number = message['from']  # Número do remetente
+                            message_text = message['text']['body']  # Conteúdo da mensagem
+                            print(f"Mensagem de {phone_number}: {message_text}")
+
+        return jsonify({"status": "success"}), 200
 
 if __name__ == "__main__":
     app.run(host="0.0.0.0", port=5000,debug=True)
