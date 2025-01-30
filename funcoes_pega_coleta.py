@@ -15,6 +15,8 @@ from datetime import datetime
 from shutil import rmtree
 import shutil
 
+coletas_sucesso = []
+coletas_erros = []
 
 def criar_pasta_temporaria():
     """Cria uma pasta temporária para armazenar os PDFs."""
@@ -28,7 +30,7 @@ def fazer_download_pdf(url, destino):
     try:
         response = requests.get(url)
         response.raise_for_status()
-        
+
         with open(destino, 'wb') as f:
             f.write(response.content)
         print(f"PDF {url} baixado com sucesso.")
@@ -38,7 +40,7 @@ def fazer_download_pdf(url, destino):
 def compactar_pasta_para_zip(pasta_temporaria):
     """Compacta a pasta temporária em um arquivo ZIP."""
     zip_file = f"{pasta_temporaria}.zip"
-    
+
     with zipfile.ZipFile(zip_file, 'w', zipfile.ZIP_DEFLATED) as zipf:
         for root, dirs, files in os.walk(pasta_temporaria):
             for file in files:
@@ -70,10 +72,10 @@ def criar_pasta_se_nao_existir(caminho):
 def obter_arquivos_pdf(pasta):
     """
     Obtém a lista de arquivos PDF de uma pasta local.
-    
+
     Args:
         pasta (str): Caminho da pasta onde os PDFs estão armazenados.
-        
+
     Returns:
         list: Lista de caminhos de arquivos PDF.
     """
@@ -86,7 +88,7 @@ def obter_arquivos_pdf(pasta):
 def compactar_pasta_para_zip(pasta_temporaria):
     """Compacta a pasta temporária em um arquivo ZIP."""
     zip_file = f"{pasta_temporaria}.zip"
-    
+
     with zipfile.ZipFile(zip_file, 'w', zipfile.ZIP_DEFLATED) as zipf:
         for root, dirs, files in os.walk(pasta_temporaria):
             for file in files:
@@ -104,10 +106,10 @@ def _criar_pasta_temporaria():
 def _obter_arquivos_pdf(pasta):
     """
     Obtém a lista de arquivos PDF de uma pasta local.
-    
+
     Args:
         pasta (str): Caminho da pasta onde os PDFs estão armazenados.
-        
+
     Returns:
         list: Lista de caminhos de arquivos PDF.
     """
@@ -122,7 +124,7 @@ def _obter_arquivos_pdf(pasta):
 def _compactar_pasta_para_zip(pasta_temporaria):
     """Compacta a pasta temporária em um arquivo ZIP."""
     zip_file = f"{pasta_temporaria}.zip"
-    
+
     with zipfile.ZipFile(zip_file, 'w', zipfile.ZIP_DEFLATED) as zipf:
         for root, dirs, files in os.walk(pasta_temporaria):
             for file in files:
@@ -144,14 +146,13 @@ def _criar_pasta_se_nao_existir(caminho):
         os.makedirs(caminho)
         print(f"Pasta {caminho} criada.")
 
-
 def processar_download_pdfs(pasta):
     """
     Processa os PDFs de uma pasta, compacta e gera um arquivo ZIP para o download.
-    
+
     Args:
         pasta (str): Caminho da pasta onde os PDFs estão localizados.
-        
+
     Returns:
         str: Caminho do arquivo ZIP gerado.
     """
@@ -161,21 +162,21 @@ def processar_download_pdfs(pasta):
     arquivos_pdf = _obter_arquivos_pdf(pasta)
     for arquivo_pdf in arquivos_pdf:
         destino = os.path.join(pasta_temporaria, os.path.basename(arquivo_pdf))
-        
+
         # Verificar se o arquivo de origem e o destino são os mesmos
         if os.path.abspath(arquivo_pdf) != os.path.abspath(destino):
             shutil.copy(arquivo_pdf, pasta_temporaria)
         else:
             print(f"Arquivo {arquivo_pdf} já está presente em {destino}, ignorando cópia.")
-    
+
     # Compactar a pasta
     zip_file = _compactar_pasta_para_zip(pasta_temporaria)
-    
+
     # Excluir a pasta temporária
     _excluir_pasta_temporaria(pasta_temporaria)
-    
+
     return zip_file
-  
+
     # except Exception as e:
     #     print(f"Erro durante o processo: {e}")
     # finally:
@@ -223,32 +224,43 @@ def acessar_pagina(driver, url):
 
 def buscar_pedido(driver, pedido):
     """Busca o pedido na página."""
-    nroped_input = WebDriverWait(driver, 10).until(
-        EC.presence_of_element_located((By.ID, "pedido"))
-    )
-    nroped_input.send_keys(pedido)
+    try:
+        nroped_input = WebDriverWait(driver, 10).until(
+            EC.presence_of_element_located((By.ID, "pedido"))
+        )
+        nroped_input.send_keys(pedido)
 
-    buscar_button = WebDriverWait(driver, 10).until(
-        EC.presence_of_element_located((By.ID, "buscar"))
-    )
-    buscar_button.click()
-    print(f"Pedido {pedido} buscado com sucesso.")
- 
-def clicar_aba_coleta(driver):
-    """Clica na aba de coleta."""
-    coleta_tab = WebDriverWait(driver, 10).until(
-        EC.presence_of_element_located((By.CSS_SELECTOR, 'a[href="#tab-coleta"]'))
-    )
-    coleta_tab.click()
-    print("Aba de coleta acessada.")
+        buscar_button = WebDriverWait(driver, 10).until(
+            EC.presence_of_element_located((By.ID, "buscar"))
+        )
+        buscar_button.click()
 
-def imprimir_coleta(driver):
-    """Clica no link para imprimir a coleta."""
-    imprimir_link = WebDriverWait(driver, 10).until(
-        EC.presence_of_element_located((By.LINK_TEXT, "Imprimir Coleta"))
-    )
-    imprimir_link.click()
-    print("Iniciada a impressão da coleta.")
+        coletas_sucesso.append(pedido)
+        print(f"Pedido {pedido} buscado com sucesso.")
+    except:
+        coletas_erro.append(pedido)
+
+def clicar_aba_coleta(driver,coleta):
+    try:
+        """Clica na aba de coleta."""
+        coleta_tab = WebDriverWait(driver, 10).until(
+            EC.presence_of_element_located((By.CSS_SELECTOR, 'a[href="#tab-coleta"]'))
+        )
+        coleta_tab.click()
+        print("Aba de coleta acessada.")
+    except:
+        coletas_erros.append(coleta)
+
+def imprimir_coleta(driver,coleta):
+    try:
+        """Clica no link para imprimir a coleta."""
+        imprimir_link = WebDriverWait(driver, 10).until(
+            EC.presence_of_element_located((By.LINK_TEXT, "Imprimir Coleta"))
+        )
+        imprimir_link.click()
+        print("Iniciada a impressão da coleta.")
+    except:
+        coletas_erros.append(coleta)
 
 def aguardar_download(download_dir, nome_arquivo):
     """Aguarda até que o arquivo seja baixado."""
@@ -303,13 +315,13 @@ def webscrap_coletas_lote(usuario, senha,array_coletas):
             print(f'Trabalhando na coleta de numero {coleta}')
             acessar_pagina(driver, "https://lonngren.app/techno/sac/pedidos.php")
             buscar_pedido(driver, coleta)
-            clicar_aba_coleta(driver)
-            imprimir_coleta(driver)
+            clicar_aba_coleta(driver,coleta)
+            imprimir_coleta(driver,coleta)
             aguardar_download(download_dir, f'{coleta}')
         driver.quit()
-    
+
         return download_dir
-    
+
     except Exception as e:
         print(f"Erro durante o processo: {e}")
     finally:
@@ -320,8 +332,8 @@ def _pesquisa_coletas(driver,array_coletas,download_dir):
         print(f'Trabalhando na coleta de numero {coleta}')
         acessar_pagina(driver, "https://lonngren.app/techno/sac/pedidos.php")
         buscar_pedido(driver, coleta)
-        clicar_aba_coleta(driver)
-        imprimir_coleta(driver)
+        clicar_aba_coleta(driver,coleta)
+        imprimir_coleta(driver,coleta)
         aguardar_download(download_dir, f'{coleta}')
     driver.quit()
 
@@ -339,7 +351,7 @@ def download_coletas(usuario, senha,array_coletas):
 
     driver.quit()
 
-    return processar_download_pdfs(download_dir)
+    return processar_download_pdfs(download_dir),coletas_sucesso,coletas_erros
 
 def webscrap_coletas(usuario, senha, pedido):
     """Fluxo principal para realizar o web scraping de coletas."""
@@ -360,7 +372,7 @@ def webscrap_coletas(usuario, senha, pedido):
         zip_file = processar_download_pdfs(download_dir)
         print(f"Arquivo ZIP gerado: {zip_file}")
         return zip_file
-    
+
     except Exception as e:
         print(f"Erro durante o processo: {e}")
     finally:

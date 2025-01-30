@@ -10,13 +10,16 @@ from selenium.webdriver.chrome.options import Options
 from webdriver_manager.chrome import ChromeDriverManager
 from selenium.webdriver.support import expected_conditions as EC
 from selenium.common.exceptions import TimeoutException
-
 from selenium.webdriver.common.keys import Keys
 import zipfile
 import requests
 from datetime import datetime
 from shutil import rmtree
 import shutil
+
+lista_erros = []
+
+lista_sucessos = []
 
 def _configurar_driver(download_dir):
     """Configura o WebDriver com as opções necessárias."""
@@ -91,31 +94,30 @@ def processar_download_pdfs(pasta):
     Returns:
         str: Caminho do arquivo ZIP gerado.
     """
-    pasta_temporaria = _criar_pasta_temporaria()
+    try:
+        pasta_temporaria = _criar_pasta_temporaria()
 
-    # Copiar os arquivos PDF para a pasta temporária
-    arquivos_pdf = _obter_arquivos_pdf(pasta)
-    for arquivo_pdf in arquivos_pdf:
-        destino = os.path.join(pasta_temporaria, os.path.basename(arquivo_pdf))
+        # Copiar os arquivos PDF para a pasta temporária
+        arquivos_pdf = _obter_arquivos_pdf(pasta)
+        for arquivo_pdf in arquivos_pdf:
+            destino = os.path.join(pasta_temporaria, os.path.basename(arquivo_pdf))
+            
+            # Verificar se o arquivo de origem e o destino são os mesmos
+            if os.path.abspath(arquivo_pdf) != os.path.abspath(destino):
+                shutil.copy(arquivo_pdf, pasta_temporaria)
+            else:
+                print(f"Arquivo {arquivo_pdf} já está presente em {destino}, ignorando cópia.")
         
-        # Verificar se o arquivo de origem e o destino são os mesmos
-        if os.path.abspath(arquivo_pdf) != os.path.abspath(destino):
-            shutil.copy(arquivo_pdf, pasta_temporaria)
-        else:
-            print(f"Arquivo {arquivo_pdf} já está presente em {destino}, ignorando cópia.")
-    
-    # Compactar a pasta
-    zip_file = _compactar_pasta_para_zip(pasta_temporaria)
-    
-    # Excluir a pasta temporária
-    _excluir_pasta_temporaria(pasta_temporaria)
-    
-    return zip_file
+        # Compactar a pasta
+        zip_file = _compactar_pasta_para_zip(pasta_temporaria)
+        
+        # Excluir a pasta temporária
+        _excluir_pasta_temporaria(pasta_temporaria)
+        
+        return zip_file,lista_sucessos,lista_erros
   
-    # except Exception as e:
-    #     print(f"Erro durante o processo: {e}")
-    # finally:
-    #     driver.quit()
+    except Exception as e:
+        print(f"Erro durante o processo: {e}")
 
 def _criar_pasta_se_nao_existir(caminho):
     """Cria uma pasta se ela não existir."""
@@ -143,18 +145,21 @@ def _acessar_pagina(driver, url):
     """Acessa uma página específica."""
     driver.get(url)
 
-def _selecionar_dropdown(driver):
-    # Espera até que o botão do dropdown esteja clicável e clica nele para abrir
-    dropdown_button = WebDriverWait(driver, 10).until(
-        EC.element_to_be_clickable((By.XPATH, "//button[@class='btn btn-primary dropdown-toggle ng-binding']"))
-    )
-    dropdown_button.click()
+def _selecionar_dropdown(driver,cte):
+    try:
+        # Espera até que o botão do dropdown esteja clicável e clica nele para abrir
+        dropdown_button = WebDriverWait(driver, 10).until(
+            EC.element_to_be_clickable((By.XPATH, "//button[@class='btn btn-primary dropdown-toggle ng-binding']"))
+        )
+        dropdown_button.click()
 
-    # Espera até o item "CTe/Minuta" estar clicável dentro do dropdown e clica nele
-    cte_minuta_item = WebDriverWait(driver, 10).until(
-        EC.element_to_be_clickable((By.XPATH, "//a[contains(text(), 'CTe/Minuta')]"))
-    )
-    cte_minuta_item.click()
+        # Espera até o item "CTe/Minuta" estar clicável dentro do dropdown e clica nele
+        cte_minuta_item = WebDriverWait(driver, 10).until(
+            EC.element_to_be_clickable((By.XPATH, "//a[contains(text(), 'CTe/Minuta')]"))
+        )
+        cte_minuta_item.click()
+    except:
+        lista_erros.append(cte)
 
 def _pesquisa_cte(driver,array_ctes):
 
@@ -162,56 +167,79 @@ def _pesquisa_cte(driver,array_ctes):
 
         _acessar_pagina(driver, "https://lonngren.app/mobile/")
 
-        _selecionar_dropdown(driver)
+        _selecionar_dropdown(driver,cte)
         
-        print(f'Trabalhando no cte {cte}')
-        # Espera o campo de pesquisa ficar visível e preenche-o com o valor desejado
-        campo_pesquisa = WebDriverWait(driver, 10).until(
-            EC.presence_of_element_located((By.XPATH, "//input[@id='search']"))
-        )
-        campo_pesquisa.send_keys(cte)  # Substitua pelo número do documento
+        try:
+            print(f'Trabalhando no cte {cte}')
+            # Espera o campo de pesquisa ficar visível e preenche-o com o valor desejado
+            campo_pesquisa = WebDriverWait(driver, 10).until(
+                EC.presence_of_element_located((By.XPATH, "//input[@id='search']"))
+            )
+            campo_pesquisa.send_keys(cte)  # Substitua pelo número do documento
 
-        # Clica no botão de pesquisa para submeter
-        botao_pesquisa = driver.find_element(By.XPATH, "//button[@type='submit']")
-        botao_pesquisa.click()        
+            # Clica no botão de pesquisa para submeter
+            botao_pesquisa = driver.find_element(By.XPATH, "//button[@type='submit']")
+            botao_pesquisa.click()        
 
-        # Aguardar o carregamento ou o término da busca, se necessário
-        WebDriverWait(driver, 10).until(
-            EC.invisibility_of_element_located((By.XPATH, "//span[@ng-show='spinBuscando']"))
-        )
+            # Aguardar o carregamento ou o término da busca, se necessário
+            WebDriverWait(driver, 10).until(
+                EC.invisibility_of_element_located((By.XPATH, "//span[@ng-show='spinBuscando']"))
+            )
 
-        # Espera até que o primeiro link da tabela esteja clicável e clica nele
-        primeiro_pedido_link = WebDriverWait(driver, 10).until(
-            EC.element_to_be_clickable((By.XPATH, "//td[.//a[@ng-click='buscaPedido(ctrc.pedido)']]//a"))
-        )
-        primeiro_pedido_link.click()
+            # Espera até que o primeiro link da tabela esteja clicável e clica nele
+            primeiro_pedido_link = WebDriverWait(driver, 10).until(
+                EC.element_to_be_clickable((By.XPATH, "//td[.//a[@ng-click='buscaPedido(ctrc.pedido)']]//a"))
+            )
+            primeiro_pedido_link.click()
 
-        # Espera até que o botão do dropdown DACTE esteja visível e interativo (não sobreposto)
-        dropdown_button_cte = WebDriverWait(driver, 10).until(
-            EC.visibility_of_element_located((By.XPATH, "//button[@id='dacteDropdown']"))
-        )
+            # Espera até que o botão do dropdown DACTE esteja visível e interativo (não sobreposto)
+            dropdown_button_cte = WebDriverWait(driver, 10).until(
+                EC.visibility_of_element_located((By.XPATH, "//button[@id='dacteDropdown']"))
+            )
 
-        driver.execute_script("arguments[0].click();", dropdown_button_cte)
+            driver.execute_script("arguments[0].click();", dropdown_button_cte)
 
-        # Agora, podemos clicar em "1 por página"
-        um_por_pagina_item = WebDriverWait(driver, 10).until(
-            EC.element_to_be_clickable((By.XPATH, "//a[contains(text(), '1 por pagina')]"))
-        )
-        um_por_pagina_item.click()
+            # Agora, podemos clicar em "1 por página"
+            um_por_pagina_item = WebDriverWait(driver, 10).until(
+                EC.element_to_be_clickable((By.XPATH, "//a[contains(text(), '2 por pagina')]"))
+            )
+            um_por_pagina_item.click()
+
+            # Espera até que o botão do dropdown XML esteja visível e interativo
+            dropdown_button_xml = WebDriverWait(driver, 10).until(
+                EC.visibility_of_element_located((By.XPATH, "//button[@id='xmlDropdown']"))
+            )
+            driver.execute_script("arguments[0].click();", dropdown_button_xml)
+
+            # Aguardar até que a opção "Download" no dropdown esteja clicável
+            opcao_download_xml = WebDriverWait(driver, 10).until(
+                EC.element_to_be_clickable((By.XPATH, "//a[contains(@title, 'Baixar arquivo XML')]"))
+            )
+            opcao_download_xml.click()
+
+            lista_sucessos.append(cte)
+
+        except:
+            lista_erros.append(cte)
 
 def ctes_lote(usuario, senha,array_ctes):
     """Fluxo principal para realizar o web scraping de coletas em lote."""
     download_dir = _criar_pasta_temporaria()
     driver = _configurar_driver(download_dir)
 
-    # try:
-    _realizar_login(driver, usuario, senha)
+    try:
+        _realizar_login(driver, usuario, senha)
 
-    _pesquisa_cte(driver, array_ctes)
+        _pesquisa_cte(driver, array_ctes)
 
-    time.sleep(1)
+        time.sleep(1)
 
-    driver.quit()
+        driver.quit()
 
-    return processar_download_pdfs(download_dir)
+        return processar_download_pdfs(download_dir)
+
+    except Exception as e:
+        print(f"Erro durante o processo: {e}")
+        driver.quit()
+
 

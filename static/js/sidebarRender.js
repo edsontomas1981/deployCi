@@ -28,6 +28,13 @@ function renderizaSidebar (idSidebar){
                                 <i class="fas fa-city"></i> Cidades Atendidas
                             </a>
                         </li>
+
+                        <li class="nav-item">
+                            <a class="nav-link" href="/entrada_notas">
+                                <i class="fa fa-file-text" aria-hidden="true"></i> Entrada Notas Fiscais
+                            </a>
+                        </li>
+
 					</ul>
 				</div>
     `

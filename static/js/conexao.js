@@ -1,4 +1,6 @@
-const BASEURL = "http://54.91.211.206/";
+// const BASEURL = "http://127.0.0.1:5000";
+
+const BASEURL = "https://sistransportslog.tech/";
 
 class ApiService {
     constructor(baseUrl) {
@@ -95,7 +97,7 @@ class ApiService {
      * @param {string} endpoint - O endpoint para o qual o POST será feito.
      * @param {Object} data - Dados que serão enviados no corpo do POST.
      */
-    async downloadFile(endpoint, data) {
+    async downloadFileArquivos(endpoint, data) {
         // Fazendo o POST com os dados
         const response = await fetch(`${this.baseUrl}/${endpoint}`, {
             method: 'POST',
@@ -104,6 +106,8 @@ class ApiService {
             },
             body: JSON.stringify(data)  // Dados enviados no POST
         });
+
+        console.log(response)
 
         // Obtém o arquivo como um Blob
         const blob = await this.handleResponse(response);
@@ -117,10 +121,50 @@ class ApiService {
         a.click();  // Dispara o download
         a.remove();  // Remove o link da página
     }
+
+    async downloadFile(endpoint, data) {
+        // Fazendo o POST para baixar os arquivos
+        const response = await fetch(`${this.baseUrl}/${endpoint}`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify(data)
+        });
+    
+        // Obtém os detalhes do processamento a partir do cabeçalho
+        const statusJson = response.headers.get("X-Status-Json");
+        const statusData = statusJson ? JSON.parse(statusJson) : null;
+    
+        // Se a resposta for um ZIP, faz o download do arquivo
+        if (response.ok && response.headers.get("Content-Type").includes("application/zip")) {
+            const blob = await response.blob();
+            const url = window.URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = 'ctes_lote.zip';
+            document.body.appendChild(a);
+            a.click();
+            a.remove();
+    
+            return {
+                status: "Download concluído",
+                arquivo: "ctes_lote.zip",
+                detalhes: statusData // Retorna os detalhes dos arquivos processados
+            };
+        }
+    
+        // Se não for um ZIP, retorna erro
+        const errorMessage = await response.text();
+        throw new Error(errorMessage);
+    }
+    
+
+
 }
 
 const formataDataPtBr = (dataString)=>{
-  
+
     const dataObj = new Date(dataString);
     // Usando 'pt-BR' para obter o formato brasileiro
     const formatoBrasileiro = new Intl.DateTimeFormat('pt-BR', {
@@ -128,7 +172,7 @@ const formataDataPtBr = (dataString)=>{
       month: '2-digit',
       day: '2-digit',
     });
-  
+
     return formatoBrasileiro.format(dataObj);
 }
 
@@ -156,7 +200,7 @@ class Conn {
             return null;
         }
     };
-    
+
 
     async sendPostRequest(url, data) {
         fetch(url, {
@@ -184,26 +228,26 @@ class Conn {
 function transformarEmListaDeListas(data) {
     // Criar uma lista vazia para armazenar as listas de objetos
     const listaDeListas = [];
-  
+
     // Iterar sobre cada objeto na lista de dados
     for (const objeto of data) {
       // Criar uma nova lista para armazenar as propriedades do objeto
       const listaDePropriedades = [];
-  
+
       // Iterar sobre cada chave do objeto
       for (const chave in objeto) {
         // Adicionar o valor da chave à lista de propriedades
         listaDePropriedades.push(objeto[chave]);
       }
-  
+
       // Adicionar a lista de propriedades à lista de listas
       listaDeListas.push(listaDePropriedades);
     }
-  
+
     // Retornar a lista de listas
     return listaDeListas;
   }
-  
+
 
 function formatarData(dataString) {
     const partesData = dataString.split('-');

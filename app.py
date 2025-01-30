@@ -22,6 +22,10 @@ DATABASE = 'bd_norte.db'
 def index():
     return render_template('index.html')
 
+@app.route('/entrada_notas', methods=['GET'])
+def entradaNfs():
+    return render_template('entradaNotas.html')
+
 @app.route('/novoInicio', methods=['GET'])
 def newIndex():
     return render_template('novo.html')
@@ -112,8 +116,8 @@ def create_comunicacao():
 
     conn = get_db_connection()
     cursor = conn.cursor()
-    cursor.execute('''INSERT INTO comunicacao_interna 
-                      (destinatario, manifesto_numero, motorista, valor_frete, percurso, data, observacao, isca_1, isca_2) 
+    cursor.execute('''INSERT INTO comunicacao_interna
+                      (destinatario, manifesto_numero, motorista, valor_frete, percurso, data, observacao, isca_1, isca_2)
                       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)''',
                    (destinatario, manifesto_numero, motorista, valor_frete, percurso, data_comunicacao, observacao, isca_1, isca_2))
 
@@ -129,15 +133,6 @@ def get_coletas():
     SENHA = 'analu1710'
     webscrap_coletas(USUARIO,SENHA,numero_pedidos)
     return jsonify({'status': 'Comunicação criada com sucesso'}), 201
-
-@app.route('/baixar_coletas_lote', methods=['POST'])
-def baixar_coletas_lote():
-    numero_pedidos = request.get_json()
-    USUARIO = 'edson@nor'
-    SENHA = 'analu1710'
-    zip_file = download_coletas(USUARIO,SENHA,numero_pedidos)
-    return send_file(zip_file, as_attachment=True)
-    # return jsonify({'status': 'Comunicação criada com sucesso'}), 201
 
 @app.route('/comunicacao/<int:ci_num>', methods=['PUT'])
 def update_comunicacao(ci_num):
@@ -171,7 +166,7 @@ def delete_comunicacao(ci_num):
 def select_ci():
     """
     Realiza uma busca flexível na tabela 'comunicacao_interna' com base em filtros opcionais.
-    
+
     Filtros opcionais:
     - 'percurso': Busca por trecho do percurso.
     - 'observacao': Busca por trecho da observação.
@@ -184,7 +179,7 @@ def select_ci():
     data = request.get_json()
 
     data = data.get('dados')
-    
+
     # Coleta os filtros enviados
     percurso = data.get('percurso')
     observacao = data.get('observacao')
@@ -212,7 +207,7 @@ def select_ci():
         params.append(f"%{isca}%")
 
     # Ordena os resultados em ordem decrescente com base na coluna 'ci_num'
-    query += " ORDER BY ci_num DESC"        
+    query += " ORDER BY ci_num DESC"
 
     # Conexão e execução da consulta
     conn = get_db_connection()
@@ -231,6 +226,26 @@ def select_ci():
 def home_ctes():
     return render_template('baixarCtes.html')
 
+@app.route('/baixar_coletas_lote', methods=['POST'])
+def baixar_coletas_lote():
+    numero_pedidos = request.get_json()
+    USUARIO = 'edson@nor'
+    SENHA = 'analu1710'
+    zip_file,arquivos_sucesso,arquivos_erro = download_coletas(USUARIO,SENHA,numero_pedidos)
+
+    print(arquivos_erro)
+
+    # Criar um JSON contendo os status dos arquivos
+    status_json = {
+        "arquivos_sucesso": arquivos_sucesso,
+        "arquivos_erro": arquivos_erro
+    }
+
+    # Enviar o ZIP no corpo da resposta e o JSON nos headers
+    response = send_file(zip_file, as_attachment=True, download_name='coletas_lote.zip', mimetype='application/zip')
+    response.headers['X-Status-Json'] = json.dumps(status_json)  # ✅ CORRETO
+    return response
+
 @app.route('/baixar_ctes_lote', methods=['POST'])
 def baixar_ctes_lote():
     try:
@@ -241,10 +256,24 @@ def baixar_ctes_lote():
         # Obter o número dos CTEs (presumindo que seja enviado via JSON)
         numero_ctes = request.get_json()
 
-        # Gerar o diretório de download
-        zip_filename = ctes_lote(USUARIO, SENHA, numero_ctes)
+        erros = [1,2,3]
 
-        return send_file(zip_filename, as_attachment=True, download_name='ctes_lote.zip', mimetype='application/zip')
+        sucessos = [1,2,3]
+        # Gerar o diretório de download
+        zip_filename,arquivos_sucesso,arquivos_erro = ctes_lote(USUARIO, SENHA, numero_ctes)
+
+        # Criar um JSON contendo os status dos arquivos
+        status_json = {
+            "arquivos_sucesso": arquivos_sucesso,
+            "arquivos_erro": arquivos_erro
+        }
+
+        # Enviar o ZIP no corpo da resposta e o JSON nos headers
+        response = send_file(zip_filename, as_attachment=True, download_name='coletas_lote.zip', mimetype='application/zip')
+        response.headers['X-Status-Json'] = json.dumps(status_json)  # ✅ CORRETO
+        return response
+
+        # return send_file(zip_filename, as_attachment=True, download_name='ctes_lote.zip', mimetype='application/zip')
 
     except Exception as e:
         print(f"Erro ao baixar os CTEs: {e}")
