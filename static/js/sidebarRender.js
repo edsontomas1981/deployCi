@@ -34,7 +34,16 @@ function renderizaSidebar (idSidebar){
                                 <i class="fa fa-file-text" aria-hidden="true"></i> Entrada Notas Fiscais
                             </a>
                         </li>
-
+                        <li class="nav-item dropdown">
+                            <a class="nav-link dropdown-toggle" href="#" id="menuCarregamento" role="button" data-bs-toggle="dropdown" aria-expanded="false">
+                                <i class="fa fa-file-text" aria-hidden="true"></i> Carregamentos
+                            </a>
+                            <ul class="dropdown-menu dropdown-menu-end" aria-labelledby="menuCarregamento">
+                                <li><a class="dropdown-item" href="/carregamentos">Carregamentos</a></li>
+                                <li><a class="dropdown-item" href="/main_carregamento">Nova Nota</a></li>
+                                <!--  <li><a class="dropdown-item" href="/entrada_notas/relatorios">Relatórios</a></li> -->
+                            </ul>
+                        </li>
 					</ul>
 				</div>
     `

@@ -22,6 +22,14 @@ DATABASE = 'bd_norte.db'
 def index():
     return render_template('index.html')
 
+@app.route('/main_carregamento', methods=['GET'])
+def main_carregamento():
+    return render_template('main_carregamento.html')
+
+@app.route('/carregamentos', methods=['GET'])
+def carregamento():
+    return render_template('carregamento.html')
+
 @app.route('/entrada_notas', methods=['GET'])
 def entradaNfs():
     return render_template('entradaNotas.html')
@@ -232,8 +240,6 @@ def baixar_coletas_lote():
     USUARIO = 'edson@nor'
     SENHA = 'analu1710'
     zip_file,arquivos_sucesso,arquivos_erro = download_coletas(USUARIO,SENHA,numero_pedidos)
-
-    print(arquivos_erro)
 
     # Criar um JSON contendo os status dos arquivos
     status_json = {

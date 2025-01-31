@@ -141,6 +141,77 @@ const msgConfirmacao = async (msg) => {
     });
   };
 
+  /**
+ * Separa os componentes da chave de acesso de uma Nota Fiscal Eletrônica (NF-e).
+ * 
+ * A chave de acesso é composta por 44 dígitos numéricos com a seguinte estrutura:
+ * 1-2     - UF
+ * 3-4     - Ano e Mês de emissão
+ * 5-8     - CNPJ do emitente
+ * 9-22    - Modelo, série e número da NF
+ * 23-34   - Código numérico e dígito verificador
+ * 35-43   - Tipo de emissão e data de emissão
+ * 44      - Dígito verificador geral
+ * 
+ * @param {string} chave - Chave de acesso completa da NF-e (44 caracteres numéricos)
+ * @returns {Object} Objeto com os componentes separados da chave de acesso
+ * @throws {Error} Se a chave não tiver exatamente 44 caracteres numéricos
+ * 
+ * @example
+ * const chave = '43171207364617000135550000000120141000120140';
+ * const componentes = separarChaveNFe(chave);
+ * console.log(componentes);
+ * // Retorna:
+ * // {
+ * //   uf: '43',
+ * //   anoMes: '17',
+ * //   cnpj: '07364617000135',
+ * //   modeloSerieNumero: '5500000001201',
+ * //   codigoDV: '4100012014',
+ * //   tipoEmissaoData: '0',
+ * //   dvGeral: '0'
+ * // }
+ */
+  function separarChaveNFe(chave) {
+    if (typeof chave !== 'string' || chave.length !== 44 || !/^\d+$/.test(chave)) {
+        throw new Error('Chave de acesso inválida. Deve conter exatamente 44 dígitos numéricos.');
+    }
+
+    return {
+        uf: chave.substring(0, 2),
+        anoMes: chave.substring(2, 4),
+        cnpj: chave.substring(6, 20),
+        modelo: chave.substring(20, 22), // Modelo da NF-e (2 dígitos)
+        serie: chave.substring(22, 25),  // Série da NF-e (3 dígitos)
+        numero: chave.substring(25, 34), // Número da NF-e (9 dígitos)
+        codigoDV: chave.substring(34, 44),
+        tipoEmissaoData: chave.substring(35, 43),
+        dvGeral: chave.substring(43, 44)
+    };
+}
+
+
+
+/**
+ * Obtém a data e a hora atuais no formato brasileiro.
+ *
+ * @returns {Object} Um objeto contendo a data e a hora formatadas.
+ * @property {string} data - Data atual no formato "DD/MM/AAAA".
+ * @property {string} hora - Hora atual no formato "HH:MM:SS".
+ *
+ * @example
+ * const resultado = obterDataHoraAtual();
+ * console.log(`Data: ${resultado.data}, Hora: ${resultado.hora}`);
+ */
+function obterDataHoraAtual() {
+  const agora = new Date();
+
+  const data = agora.toLocaleDateString('pt-BR'); // Formato: DD/MM/AAAA
+  const hora = agora.toLocaleTimeString('pt-BR'); // Formato: HH:MM:SS
+
+  return { data, hora };
+}
+
   function showLoaderSweet(msg) {
     Swal.fire({
         title: msg,
@@ -156,3 +227,5 @@ const msgConfirmacao = async (msg) => {
 function hideLoaderSweet() {
     Swal.close();
 }
+
+
