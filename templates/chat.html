@@ -1,0 +1,44 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Chat em Tempo Real</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.7.2/socket.io.js"></script>
+</head>
+<body>
+    <h2>Chat WebSocket</h2>
+    <ul id="messages"></ul>
+    <input id="idContato" type="text" placeholder="Digite seu contato">
+    <input id="name" type="text" placeholder="Digite seu nome">
+    <input id="msgInput" type="text" placeholder="Digite sua mensagem">
+    <button onclick="sendMessage()">Enviar</button>
+
+    <script>
+        // 📌 Conectar ao WebSocket
+        var socket = io.connect("http://127.0.0.1:5000");
+
+        // 📌 Exibir mensagens recebidas
+        socket.on("message", function(msg) {
+            var li = document.createElement("li");
+            li.appendChild(document.createTextNode(msg));
+            document.getElementById("messages").appendChild(li);
+        });
+
+        // 📌 Enviar mensagem ao servidor
+        function sendMessage() {
+            var msgInput = document.getElementById("msgInput");
+            var msg = msgInput.value.trim();
+            var nome = document.getElementById('name').value
+            var phoneNumber = document.getElementById('idContato').value
+
+            if (msg !== "" && socket) {
+                socket.send({msg:msg, phone:phoneNumber, nome:nome});
+                msgInput.value = "";
+            } else {
+                alert("Digite uma mensagem válida!");
+            }
+        }
+    </script>
+</body>
+</html>

@@ -6,17 +6,92 @@ from impressao_ci import imprimir_ci
 from iscas import localiza_iscas
 from funcoes_pega_coleta import webscrap_coletas,webscrap_coletas_lote,download_coletas
 from funcoes_baixa_cte import ctes_lote,processar_download_pdfs
+from flask_socketio import SocketIO, send, emit, join_room
+from flask import send_from_directory
+import redis
 import os
 import shutil
 import zipfile
+import requests
+import json
 
+from messages import carrega_contato
+from contatos import Contato
 
 app = Flask(__name__, template_folder='templates', static_folder='static')
 
 # Permitir CORS para qualquer origem
 # CORS(app, resources={r"/*": {"origins": "*"}})
 
+socketio = SocketIO(app, cors_allowed_origins="*")  # Permitir conexões de qualquer origem
+
+
 DATABASE = 'bd_norte.db'
+
+@socketio.on("message")
+def handle_message(data):
+
+    contato = carrega_contato(data.get('phone'),data.get('nome'))  # Carrega ou cria o contato
+    contato.add_messages_sent(data.get('msg'))  # Adiciona a mensagem à lista 'sent'
+
+    print(len(contato.messages['sent']))
+    if contato.state == 'aberto':
+        if len(contato.messages['sent'])>1:
+            if data.get('msg') == 'coleta':
+                contato.state = 'coleta'
+                send('Digite o número do pedido para coletas:')
+                return
+            elif data.get('msg') == 'cte':
+                contato.state = 'cte'
+                send('Digite o número do pedido para cte:')
+                return
+            else:
+                send('Opção inválida. Por favor, escolha uma das opções acima.')
+        else:
+            send('Olá! No que posso ajudar hoje?\n\n1 - Realizar coletas\n2 - Consultar notas fiscais\n\nPor favor, escolha uma das opções acima.')
+
+
+    
+    # Agora as mensagens enviadas devem ser acumuladas corretamente.
+    print(contato.messages.get('sent'))  # Mostra todas as mensagens enviadas até agora.
+
+def enviar_mensagem_para_cliente():
+    url = "https://graph.facebook.com/v21.0/559569933902545/messages"
+
+    access_token = "EAANxmkzeEj8BO85QJsrCGXqWebvoJZBu3g27YraLQyltLNeOehOjFLoU0Cvp89aHYLMJLoZCZATD3o19u90QHd2oR1QYNNhQUwgZBmi7haKZBcN49UEQVGitJHDInZBTZCs6vR5xeYQ6FaqCne5MlMotFKQyz5tCaixsnlZCFuQSVzvPGApRo5fIgAPD6wVxCFMmLEnZBoBDLnn7zN4tYoLqWA9CZBJkQ4AdBC1WY2"
+
+    data = {
+            "messaging_product": "whatsapp",
+            "to": "5511969262277",
+            "type": "text",
+            "text": {
+                "body": "teste via python"
+            }
+    }
+
+    headers = {
+        "Authorization": f"Bearer {access_token}",
+        "Content-Type": "application/json"
+    }
+
+    response = requests.post(url, headers=headers, json=data)
+
+    if response.status_code == 200:
+        print("Mensagem enviada com sucesso!")
+        send('sua mensagem foi enviada')
+    else:
+        print(f"Erro ao enviar a mensagem: {response.status_code}")
+        print(response.text)
+
+# Rota principal para carregar a interface do chat
+@app.route('/chat')
+def chat():
+    enviar_mensagem_para_cliente()
+    return render_template('chat.html')
+
+@app.route('/favicon.ico')
+def favicon():
+    return send_from_directory("static", "favicon.ico", mimetype="image/vnd.microsoft.icon")
 
 @app.route('/', methods=['GET'])
 def index():
@@ -320,6 +395,6 @@ def webhook():
                             print(f"Mensagem de {phone_number}: {message_text}")
 
         return jsonify({"status": "success"}), 200
-
+    
 if __name__ == "__main__":
-    app.run(host="0.0.0.0", port=5000,debug=True)
+    socketio.run(app, host="0.0.0.0", port=5000, debug=True)
