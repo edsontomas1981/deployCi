@@ -8,15 +8,17 @@ from funcoes_pega_coleta import webscrap_coletas,webscrap_coletas_lote,download_
 from funcoes_baixa_cte import ctes_lote,processar_download_pdfs
 from flask_socketio import SocketIO, send, emit, join_room
 from flask import send_from_directory
-import redis
 import os
 import shutil
 import zipfile
 import requests
 import json
 
-from messages import carrega_contato
-from contatos import Contato
+from contatos import create_contato,get_contato_by_fone
+from estados_contatos import get_estado_contato_by_telefone,create_estado_contato,update_estado_contato
+from cadastro_contatos import cadastrar_contatos
+from menu import gerar_menu,selecao_menu
+
 
 app = Flask(__name__, template_folder='templates', static_folder='static')
 
@@ -29,26 +31,171 @@ socketio = SocketIO(app, cors_allowed_origins="*")  # Permitir conexões de qual
 DATABASE = 'bd_norte.db'
 
 @socketio.on("message")
-def handle_message(data):
+def handle_mensagens (data):
+    telefone = data.get("phone")
+    mensagem = data.get("msg")
+    nome = data.get('nome')
 
-    contato = carrega_contato(data.get('phone'),data.get('nome'))  # Carrega ou cria o contato
-    contato.add_messages_sent(data.get('msg'))  # Adiciona a mensagem à lista 'sent'
+    estado_contato = get_estado_contato_by_telefone(telefone)
 
-    print(len(contato.messages['sent']))
-    if contato.state == 'aberto':
-        if len(contato.messages['sent'])>1:
-            if data.get('msg') == 'coleta':
-                contato.state = 'coleta'
-                send('Digite o número do pedido para coletas:')
-                return
-            elif data.get('msg') == 'cte':
-                contato.state = 'cte'
-                send('Digite o número do pedido para cte:')
-                return
-            else:
-                send('Opção inválida. Por favor, escolha uma das opções acima.')
-        else:
-            send('Olá! No que posso ajudar hoje?\n\n1 - Realizar coletas\n2 - Consultar notas fiscais\n\nPor favor, escolha uma das opções acima.')
+    print(estado_contato)
+
+    if not estado_contato:
+        create_contato(telefone)
+        create_estado_contato((telefone, 1,mensagem,1 ))
+        send("Olá! Percebi que esta é a sua primeira vez por aqui. 😊 Para que possamos atendê-lo melhor, você poderia me informar o seu nome, por favor?")
+   
+    match estado_contato[1]:
+        case "0":
+            send(selecao_menu(estado_contato,mensagem,telefone))
+            # update_estado_contato(telefone,0,1,mensagem)
+        case "1":
+            send(cadastrar_contatos(estado_contato,telefone,mensagem))
+            pass
+            # Ação para valor1
+        case 2:
+            pass
+            # Ação para valor2
+        # case _:
+        #     # Ação caso nenhum padrão seja correspondido
+
+
+
+
+    # create_estado_contato((telefone, 1, json.dumps({"nome": nome})))
+
+    # contato = get_contato_by_fone(telefone)
+
+    # print(contato)
+
+    # if not contato:
+    #     create_contato(telefone)
+   
+    # # Se o contato não tem estado salvo, inicia o fluxo
+    # if telefone not in estados_contatos:
+    #     estados_contatos[telefone] = {"estado": 1, "coleta": Coleta()}
+
+    # estado_atual = estados_contatos[telefone]["estado"]
+    # coleta = estados_contatos[telefone]["coleta"]
+
+    # # Controle do fluxo com base no estado
+    # if estado_atual == 1:
+    #     resposta = "📌 *Cadastro de Coleta*\n\nInforme o *CNPJ do remetente*:"
+    #     estados_contatos[telefone]["estado"] = 2
+    #     send(resposta)
+
+    # elif estado_atual == 2:
+    #     coleta.remetente = usuarios.get(mensagem, {"cnpj": mensagem, "nome": "Desconhecido"})
+    #     resposta = f"✅ Remetente encontrado: {coleta.remetente['nome']}\n\nInforme o *CNPJ do destinatário*:"
+    #     estados_contatos[telefone]["estado"] = 3
+
+    # elif estado_atual == 3:
+    #     coleta.destinatario = usuarios.get(mensagem, {"cnpj": mensagem, "nome": "Desconhecido"})
+    #     resposta = f"✅ Destinatário encontrado: {coleta.destinatario['nome']}\n\nQuem pagará o frete?\n1️⃣ Remetente\n2️⃣ Destinatário\n3️⃣ Terceiro"
+    #     estados_contatos[telefone]["estado"] = 4
+
+    # elif estado_atual == 4:
+    #     pagadores = {"1": "Remetente", "2": "Destinatário", "3": "Terceiro"}
+    #     coleta.pagador_frete = pagadores.get(mensagem, "Desconhecido")
+    #     resposta = "📦 Quantos *volumes* serão transportados?"
+    #     estados_contatos[telefone]["estado"] = 5
+
+    # elif estado_atual == 5:
+    #     coleta.volumes = int(mensagem)
+    #     resposta = "⚖️ Informe o *peso total da carga (kg)*:"
+    #     estados_contatos[telefone]["estado"] = 6
+
+    # elif estado_atual == 6:
+    #     coleta.peso = float(mensagem)
+    #     resposta = "💰 Informe o *valor da nota fiscal*:"
+    #     estados_contatos[telefone]["estado"] = 7
+
+    # elif estado_atual == 7:
+    #     coleta.valor_nf = float(mensagem)
+    #     resposta = "📞 Informe o *nome do contato*:"
+    #     estados_contatos[telefone]["estado"] = 8
+
+    # elif estado_atual == 8:
+    #     coleta.contato["nome"] = mensagem
+    #     resposta = "📲 Informe o *telefone do contato*:"
+    #     estados_contatos[telefone]["estado"] = 9
+
+    # elif estado_atual == 9:
+    #     coleta.contato["telefone"] = mensagem
+    #     resposta = "📍 Informe o *CEP da coleta*:"
+    #     estados_contatos[telefone]["estado"] = 10
+
+    # elif estado_atual == 10:
+    #     coleta.endereco_coleta["cep"] = mensagem
+    #     resposta = "🏠 Informe o *logradouro da coleta*:"
+    #     estados_contatos[telefone]["estado"] = 11
+
+    # elif estado_atual == 11:
+    #     coleta.endereco_coleta["logradouro"] = mensagem
+    #     resposta = "🔢 Informe o *número* do local de coleta:"
+    #     estados_contatos[telefone]["estado"] = 12
+
+    # elif estado_atual == 12:
+    #     coleta.endereco_coleta["numero"] = mensagem
+    #     resposta = "🏠 Informe o *complemento* (ou digite 'Nenhum'):"
+    #     estados_contatos[telefone]["estado"] = 13
+
+    # elif estado_atual == 13:
+    #     coleta.endereco_coleta["complemento"] = mensagem if mensagem.lower() != "nenhum" else ""
+    #     resposta = "🏘️ Informe o *bairro*:"
+    #     estados_contatos[telefone]["estado"] = 14
+
+    # elif estado_atual == 14:
+    #     coleta.endereco_coleta["bairro"] = mensagem
+    #     resposta = "🌆 Informe a *cidade*:"
+    #     estados_contatos[telefone]["estado"] = 15
+
+    # elif estado_atual == 15:
+    #     coleta.endereco_coleta["cidade"] = mensagem
+    #     resposta = "📍 Informe a *UF* (ex: SP, RJ, MG):"
+    #     estados_contatos[telefone]["estado"] = 16
+
+    # elif estado_atual == 16:
+    #     coleta.endereco_coleta["uf"] = mensagem.upper()
+    #     resposta = (
+    #         f"✅ *Coleta cadastrada com sucesso!*\n\n"
+    #         f"📦 Remetente: {coleta.remetente['nome']}\n"
+    #         f"📦 Destinatário: {coleta.destinatario['nome']}\n"
+    #         f"🚚 Pagador do Frete: {coleta.pagador_frete}\n"
+    #         f"📦 Volumes: {coleta.volumes}\n"
+    #         f"⚖️ Peso: {coleta.peso} kg\n"
+    #         f"💰 Valor NF: R$ {coleta.valor_nf}\n"
+    #         f"📞 Contato: {coleta.contato['nome']} - {coleta.contato['telefone']}\n"
+    #         f"📍 Endereço de Coleta: {coleta.endereco_coleta['logradouro']}, {coleta.endereco_coleta['numero']}, {coleta.endereco_coleta['bairro']} - {coleta.endereco_coleta['cidade']}/{coleta.endereco_coleta['uf']}\n"
+    #         f"🔄 *Digite 0 para voltar ao menu inicial*."
+    #     )
+    #     estados_contatos.pop(telefone)  # Remove o estado para reiniciar o fluxo
+
+    # else:
+    #     resposta = "Opção inválida! Digite um número válido."
+
+    return jsonify({"resposta": 'resposta'})
+
+# def handle_message(data):
+
+#     contato = carrega_contato(data.get('phone'),data.get('nome'))  # Carrega ou cria o contato
+#     contato.add_messages_sent(data.get('msg'))  # Adiciona a mensagem à lista 'sent'
+
+#     print(len(contato.messages['sent']))
+#     if contato.state == 'aberto':
+#         if len(contato.messages['sent'])>1:
+#             if data.get('msg') == 'coleta':
+#                 contato.state = 'coleta'
+#                 send('Digite o número do pedido para coletas:')
+#                 return
+#             elif data.get('msg') == 'cte':
+#                 contato.state = 'cte'
+#                 send('Digite o número do pedido para cte:')
+#                 return
+#             else:
+#                 send('Opção inválida. Por favor, escolha uma das opções acima.')
+#         else:
+#             send('Olá! No que posso ajudar hoje?\n\n1 - Realizar coletas\n2 - Consultar notas fiscais\n\nPor favor, escolha uma das opções acima.')
 
 
     

@@ -1,30 +1,35 @@
-from contatos import Contato
+from conexao import get_db,close_connection
 
-messages = {}
+# Funções para executar as queries SQL para a tabela mensagens
+def create_mensagem(mensagem):
+    db = get_db()
+    cursor = db.cursor()
+    cursor.execute("INSERT INTO mensagens (contato_fk, msg) VALUES (?, ?)", mensagem)  # Data é automática
+    db.commit()
 
-def carrega_contato(phone,nome):
-    """Adiciona um contato ao dicionário 'messages' caso ainda não exista.
+def get_mensagens():
+    db = get_db()
+    cursor = db.cursor()
+    cursor.execute("SELECT * FROM mensagens")
+    return cursor.fetchall()
 
-    Args:
-        contato: Um objeto que deve ter um atributo 'phone' representando o número do contato.
-    
-    Returns:
-        O contato existente, se já estiver cadastrado, ou o novo contato adicionado.
-    """
+def get_mensagem_by_id(id):
+    db = get_db()
+    cursor = db.cursor()
+    cursor.execute("SELECT * FROM mensagens WHERE id = ?", (id,))
+    return cursor.fetchone()
 
-    if phone in messages:
-        print("O contato já existe.")
-        return messages[phone]  # Retorna o contato já existente
-    
-    contato = add_contato(phone,nome)
+def update_mensagem(id, mensagem):
+    db = get_db()
+    cursor = db.cursor()
+    cursor.execute("""
+        UPDATE mensagens SET contato_fk = ?, msg = ?
+        WHERE id = ?
+    """, mensagem + (id,))
+    db.commit()
 
-    print(f"Contatos: {messages}")
-
-    return contato  # Retorna o novo contato adicionado
-
-
-def add_contato(contato,nome):
-    contato=Contato(contato, nome)
-    messages[contato.phone] = contato
-    print(f"Contatos: {messages}")
-    return contato
+def delete_mensagem(id):
+    db = get_db()
+    cursor = db.cursor()
+    cursor.execute("DELETE FROM mensagens WHERE id = ?", (id,))
+    db.commit()

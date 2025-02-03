@@ -1,18 +1,40 @@
-class Contato():
-    def __init__(self, phone, nome):
-        self.nome = nome
-        self.phone = phone
-        self.messages = {'sent':[],'received':[]}
-        self.state = 'aberto'
+from conexao import get_db,close_connection
 
-    def __str__(self):
-        return f"[Nome: {self.nome}, Telefone: {self.phone}], {self.messages}"
-    
-    def __repr__(self):
-        return f"[Nome: {self.nome}, Telefone: {self.phone}],  {self.messages} "
-    
-    def add_messages_sent(self, message):
-        self.messages['sent'].append(message)
+def create_contato(contato):
+    db = get_db()
+    cursor = db.cursor()
+    cursor.execute("INSERT INTO contato (fone) VALUES (?)", (contato,))
+    db.commit()
 
-    def set_state(self, state):
-        self.state = state
+def get_contatos():
+    db = get_db()
+    cursor = db.cursor()
+    cursor.execute("SELECT * FROM contato")
+    return cursor.fetchall()
+
+def get_contato_by_id(id):
+    db = get_db()
+    cursor = db.cursor()
+    cursor.execute("SELECT * FROM contato WHERE id = ?", (id,))
+    return cursor.fetchone()
+
+def get_contato_by_fone(fone):
+    db = get_db()
+    cursor = db.cursor()
+    cursor.execute("SELECT * FROM contato WHERE fone = ?", (fone,))
+    return cursor.fetchone()
+
+def update_contato(id, contato):
+    db = get_db()
+    cursor = db.cursor()
+    cursor.execute("""
+        UPDATE contato SET fone = ?, clientes_fk = ?
+        WHERE id = ?
+    """, contato + (id,))
+    db.commit()
+
+def delete_contato(id):
+    db = get_db()
+    cursor = db.cursor()
+    cursor.execute("DELETE FROM contato WHERE id = ?", (id,))
+    db.commit()
