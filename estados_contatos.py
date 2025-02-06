@@ -22,7 +22,6 @@ def get_estado_contato_by_telefone(telefone):
     return cursor.fetchone()
 
 def update_estado_contato(telefone, novo_estado, novo_passo, dados):
-    print(telefone, novo_estado, novo_passo, dados)
     db = get_db()
     cursor = db.cursor()
     

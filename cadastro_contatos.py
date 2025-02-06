@@ -1,7 +1,6 @@
 from estados_contatos import get_estado_contato_by_telefone,create_estado_contato,update_estado_contato
 
 def cadastrar_contatos(passo,telefone,mensagem):
-    print(passo[4])
     match passo[4]:
         case 1:
             update_estado_contato(telefone,1,2,mensagem)

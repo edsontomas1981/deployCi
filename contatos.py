@@ -33,6 +33,12 @@ def update_contato(id, contato):
     """, contato + (id,))
     db.commit()
 
+def update_contato_nome(fone, nome):
+    db = get_db()
+    cursor = db.cursor()
+    cursor.execute(""" UPDATE contato SET nome = ? WHERE fone = ? """, (nome, fone) )
+    db.commit()
+
 def delete_contato(id):
     db = get_db()
     cursor = db.cursor()

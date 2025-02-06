@@ -1,10 +1,10 @@
 from conexao import get_db,close_connection
 
 # Funções para executar as queries SQL para a tabela mensagens
-def create_mensagem(mensagem):
+def create_mensagem(telefone,mensagem):
     db = get_db()
     cursor = db.cursor()
-    cursor.execute("INSERT INTO mensagens (contato_fk, msg) VALUES (?, ?)", mensagem)  # Data é automática
+    cursor.execute("INSERT INTO mensagens (contato_id, mensagem) VALUES (?, ?)", (telefone,mensagem))  # Data é automática
     db.commit()
 
 def get_mensagens():
