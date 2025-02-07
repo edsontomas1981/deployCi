@@ -94,11 +94,32 @@ def carrega_dados_coleta(json_coletas,msg):
         return json_coletas
     
     if (json_coletas['destinatario']['cnpj']==''):
-        cnpj,razao = processa_cnpj(json_coletas,msg,'destinatario')
-        print(cnpj,razao)
+        cnpj = processa_cnpj(json_coletas,msg)
+        if not cnpj:
+            json_coletas['pergunta']="Ops! Parece que algo deu errado. Por favor, verifique os dados e tente novamente."
+            return json_coletas
+
+        json_coletas['destinatario']['cnpj']= cnpj
+        json_coletas['pergunta'] = "Informe a razão social do destinatario"  #perguntya aqui é a razao social
+
+        razao = processa_razao_social(json_coletas, cnpj) #testa se ele consegue a razao social via sistema
+        if razao:
+            json_coletas['destinatario']['cnpj']= cnpj
+            json_coletas['pergunta']="Informe o cep da coleta"
+            return json_coletas
+
+        else:
+            json_coletas['destinatario']['razao'] = msg
+            json_coletas['pergunta']="Informe o cep da coleta"
+            return json_coletas
+        
+
+
+
+        
         if not cnpj:
             json_coletas['perunta']="Ops! Parece que algo deu errado. Por favor, verifique os dados e tente novamente."
-            return json_coletas
+
         
         json_coletas['destinatario']['cnpj']  = cnpj
         json_coletas['destinatario']['razao']  = razao
@@ -152,12 +173,13 @@ def processa_cnpj(json_coletas, msg,campo):
         if not cliente:
             cliente_dados = busca_dados_cnpj(cnpj_formatado)
             if not cliente_dados:
-                return set_pergunta(json_coletas, "Ops! Parece que algo deu errado. Por favor, verifique os dados e tente novamente.")
+                return None
+            
             cadastra_cliente(cliente_dados)
             cliente = get_cliente_by_cnpj(cnpj_formatado)
 
     
-    return cliente[0],cliente[1]
+    return cliente
 
 
 def processa_razao_social(json_coletas, msg):
