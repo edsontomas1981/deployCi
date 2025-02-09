@@ -25,8 +25,8 @@ def selecao_menu(estado_contato,msg,telefone):
         case "1":
                 match msg:
                     case "1":
-                        dados = {"remetente":{"cnpj":'',"razao":''},
-                                "destinatario":{"cnpj":'',"razao":''},
+                        dados = {"remetente":{"cnpj":'',"razao":'','cep':'','rua':'','numero':'','complemento':'','bairro':'','cidade':'','uf':''},
+                                "destinatario":{"cnpj":'',"razao":'','cep':'','rua':'','numero':'','complemento':'','bairro':'','cidade':'','uf':''},
                                 "dados_coleta":{'volumes':0,'peso':0,'m3':0,'valor_nf':0},
                                 "contato":{'telefone':'','nome':''},
                                 "observacao":'',
@@ -34,7 +34,7 @@ def selecao_menu(estado_contato,msg,telefone):
                                                     'bairro':'','cidade':'','uf':''},
                                 "endereco_entrega":{'cep':'','rua':'','num':'','complemento':'',
                                                     'bairro':'','cidade':'','uf':''},
-                                "pergunta": "Qual o CNPJ do remetente?"
+                                "pergunta": "Me passa o CNPJ do remetente."
                                 }
                         update_estado_contato(telefone,2,0,json.dumps(dados))
                         return f"Qual o CNPJ do remetente?"

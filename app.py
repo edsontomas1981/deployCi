@@ -64,7 +64,6 @@ def handle_mensagens (data):
                     return  
 
         case "1":
-            print(estado_contato[4])
             match str(estado_contato[4]):
                 case '1': # Selecione a opcao
                     send(selecao_menu(estado_contato,mensagem,telefone))
