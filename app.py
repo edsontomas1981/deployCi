@@ -66,12 +66,16 @@ def handle_mensagens (data):
         case "1":
             match str(estado_contato[4]):
                 case '1': # Selecione a opcao
-                    send(selecao_menu(estado_contato,mensagem,telefone))
+                    send(selecao_menu(estado_contato,mensagem,telefone))                
 
         case "2":
             estado_contato = get_estado_contato_by_telefone(telefone)
             json_atual = (json.loads(estado_contato[2]))
-            json_atual = carrega_dados_coleta(json_atual,mensagem)
+            temp_json = carrega_dados_coleta(json_atual,mensagem)
+            
+            if temp_json:
+                json_atual = temp_json
+           
             update_estado_contato(telefone, 2, 0,json.dumps(json_atual))
             send(json_atual.get('pergunta'))
    
