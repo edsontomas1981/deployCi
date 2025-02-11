@@ -48,11 +48,16 @@ def carrega_dados_coleta(json_coletas,msg):
 
     cnpj_formatado = remove_caracteres_cnpj_cpf(msg)
 
-    def _processa_dados_da_carga(json_coletas):
-
-        pass
+    def _processa_dados_da_carga(json_coletas,pergunta):
+        campos = [
+            ('volumes', "Beleza! Agora me diz o nome do {}."),
+            ('m3', "Agora me passa o CEP do {}."),
+            ('peso', "E a rua, qual é?"),
+            ('valor_nf', "Agora me fala o número do endereço."),
+        ]
 
     def _cria_clientes(json_cliente):
+        print('esta cirando o cliente no bd')
         cnpj_formatado = remove_caracteres_cnpj_cpf(json_cliente.get('cnpj'))
         cliente = get_cliente_by_cnpj(cnpj_formatado)
         if not cliente: 
@@ -69,8 +74,10 @@ def carrega_dados_coleta(json_coletas,msg):
             dados_cliente.append(json_cliente.get('uf'))
             create_cliente(dados_cliente)
 
-    def _carrega_clientes(cliente,entidade,pergunta):
-        cliente = get_cliente_by_cnpj(cnpj_formatado)
+    def _carrega_clientes(cliente, entidade, pergunta, json_coletas):
+        """
+        Preenche os dados do cliente no dicionário json_coletas.
+        """
         if cliente:
             json_coletas[entidade]['cnpj'] = cliente[0]
             json_coletas[entidade]['razao'] = cliente[1]
@@ -82,7 +89,7 @@ def carrega_dados_coleta(json_coletas,msg):
             json_coletas[entidade]['cidade'] = cliente[8]
             json_coletas[entidade]['uf'] = cliente[9]
             json_coletas['pergunta'] = pergunta
-            return json_coletas
+        return json_coletas  # Retorna o objeto atualizado
 
     def processar_entidade(json_coletas, msg, entidade,pergunta):
         """
@@ -128,7 +135,7 @@ def carrega_dados_coleta(json_coletas,msg):
 
         return json_coletas
 
-    def processar_cnpj(json_coletas, msg, entidade,pergunta):
+    def processar_cnpj(json_coletas, msg, entidade, pergunta):
         """
         Verifica e cadastra o CNPJ da entidade.
         """
@@ -141,47 +148,28 @@ def carrega_dados_coleta(json_coletas,msg):
         cliente = get_cliente_by_cnpj(cnpj_formatado)
 
         if cliente:
-            _carrega_clientes(cliente,entidade,pergunta)
-            return json_coletas
+            return _carrega_clientes(cliente, entidade, pergunta, json_coletas)  # Passa json_coletas corretamente
 
-        if len(cnpj_formatado) == 14 and not cliente:
+        if len(cnpj_formatado) == 14:
+            print('é um cnpj')
             response, json_cliente = busca_cnpj_ws(cnpj_formatado)
             if response != 200 or json_cliente.get('status') == 'ERROR':
+                print('erro na busca no ws')
                 json_coletas['pergunta'] = "Ops! Parece que algo deu errado. Por favor, verifique os dados e tente novamente."
                 return json_coletas
+            print('buscou carretamente no ws')
             _cria_clientes(json_cliente)
-            return json_coletas
-        
 
-        return processar_entidade(json_coletas, msg, entidade,pergunta)
-    
-    def processar_cpf(json_coletas, msg, entidade,pergunta):
-        """
-        Verifica e cadastra o CNPJ da entidade.
-        """
-        cnpj_formatado = remove_caracteres_cnpj_cpf(msg)
-        
-        if json_coletas[entidade]['cnpj'] == '' and not documento_e_valido(msg):
-            json_coletas['pergunta'] = "Ops! Parece que o documento informado é inválido. Por favor, verifique os dados e tente novamente."
-            return json_coletas
-        
-        cliente = get_cliente_by_cnpj(cnpj_formatado)
 
-        if cliente:
-            _carrega_clientes(cliente,entidade,"Agora me passa o CNPJ do destinatário.")
-            return json_coletas
+            # Buscar novamente o cliente cadastrado
+            cliente = get_cliente_by_cnpj(cnpj_formatado)
+            print('cliente já foi cadastrado')
 
-        if len(cnpj_formatado) == 14 and not cliente:
-            response, json_cliente = busca_cnpj_ws(cnpj_formatado)
-            if response != 200 or json_cliente.get('status') == 'ERROR':
-                json_coletas['pergunta'] = "Ops! Parece que algo deu errado. Por favor, verifique os dados e tente novamente."
-                return json_coletas
-            # Se conseguiu buscar os dados
+            if cliente:
+                print('cliente já constava como cadastrado')
+                return _carrega_clientes(cliente, entidade, pergunta, json_coletas)  # Passa json_coletas corretamente
 
-            _cria_clientes(json_cliente)
-            return json_coletas
-        
-        return processar_entidade(json_coletas, msg, entidade,pergunta)
+        return processar_entidade(json_coletas, msg, entidade, pergunta)
 
     def processar_dados(json_coletas, msg, campos_vazios, entidade,pergunta_final):
         """
@@ -192,21 +180,20 @@ def carrega_dados_coleta(json_coletas,msg):
         
         return json_coletas
     
-
     campos_vazios = [campo for campo, valor in json_coletas['remetente'].items() if valor == '']
-    print(f'Remetente : {len(campos_vazios)}')
     if len(campos_vazios)>0:
         processar_dados(json_coletas,msg,campos_vazios,'remetente',"Agora me passa o CNPJ do destinatário.")
         return json_coletas
     
-
     campos_vazios = [campo for campo, valor in json_coletas['destinatario'].items() if valor == '']
-    print(f'Destinatario : {len(campos_vazios)}')
     if len(campos_vazios)>0:
         processar_dados(json_coletas,msg,campos_vazios,'destinatario',"Quantos volumes serão retirados.")
         return json_coletas
 
     json_coletas['pergunta'] = "Quantos volumes serão retirados?"
+
+    campos_vazios = [campo for campo, valor in json_coletas['dados_coleta'].items() if valor == '']
+
     
     _processa_dados_da_carga(json_coletas)
 
