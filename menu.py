@@ -27,7 +27,7 @@ def selecao_menu(estado_contato,msg,telefone):
                     case "1":
                         dados = {"remetente":{"cnpj":'',"razao":'','cep':'','rua':'','numero':'','complemento':'','bairro':'','cidade':'','uf':''},
                                 "destinatario":{"cnpj":'',"razao":'','cep':'','rua':'','numero':'','complemento':'','bairro':'','cidade':'','uf':''},
-                                "dados_coleta":{'volumes':0,'peso':0,'m3':0,'valor_nf':0},
+                                "dados_coleta":{'volumes':'','peso':'','m3':'','valor_nf':'','num_nf':''},
                                 "contato":{'telefone':'','nome':''},
                                 "observacao":'',
                                 "endereco_coleta":{'cep':'','rua':'','num':'','complemento':'',
@@ -55,18 +55,3 @@ def selecao_menu(estado_contato,msg,telefone):
 
                     case _:
                         return "Opção inválida. Por favor, escolha uma opção válida."
-            
-            
-        #     return cadastrar_contatos(estado_contato, telefone, msg)
-        # case "2":
-        #     return cadastrar_coletas(estado_contato, telefone, msg)
-        # case "3":
-        #     return "Coletas"
-        #     # Ação para valor2
-        # case "4":
-        #     return f"Cotação"
-        #     # Ação para valor2
-        # case "5":
-        #     # Ação caso nenhum padrão seja correspondido
-        #     pass 
-
