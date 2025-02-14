@@ -44,20 +44,51 @@ def delete_coleta(id):
     cursor.execute("DELETE FROM coleta WHERE id = ?", (id,))
     db.commit()
 
+
+def _processa_carga(json_coletas,entidade,msg,campos):
+    # campos = [
+    #     ('volumes', "Qual é a metragem desses volumes? Pode ser só da maior, tipo 1,0 x 0,59 x 0,89."),
+    #     ('m3', "Agora, qual é o peso total dessa carga?"),
+    #     ('peso', "Qual é o valor desses produtos?"),
+    #     ('valor_nf', "E o número da nota fiscal, você já tem? Se ainda não tiver, é só digitar 'não'."),
+    #     ('num_nf', "Legal! Agora, confirma os dados: Volumes: {}, Peso: {} kg, M³: {}, Valor: R$ {}, Nota Fiscal Nº {}. Está tudo certo ou deseja alterar alguma informação? (1) Volumes, (2) Peso, (3) M³, (4) Valor, (5) Nota Fiscal."),
+    #     # ('num_nf', "Legal! Agora vamos conferir o endereço da coleta. Me informa qual é o CEP?"),
+    # ]
+
+    for campo, pergunta in campos:
+        if json_coletas[entidade][campo] == '':
+            json_coletas[entidade][campo] = msg.lower()
+            json_coletas['pergunta'] = pergunta.format(json_coletas[entidade].get('volumes'),json_coletas[entidade].get('peso'),
+                                                        json_coletas[entidade].get('m3'),json_coletas[entidade].get('valor_nf')
+                                                        ,json_coletas[entidade].get('num_nf'))
+            return json_coletas
+    return json_coletas
+
+
 def carrega_dados_coleta(json_coletas,msg):
 
     cnpj_formatado = remove_caracteres_cnpj_cpf(msg)
 
     def _processa_dados_da_carga(json_coletas,entidade):
-        print(json_coletas[entidade])
-        campos = [
-            ('volumes', "Qual é a metragem desses volumes? Pode ser só da maior, tipo 1,0 x 0,59 x 0,89."),
-            ('m3', "Agora, qual é o peso total dessa carga?"),
-            ('peso', "Qual é o valor desses produtos?"),
-            ('valor_nf', "E o número da nota fiscal, você já tem? Se ainda não tiver, é só digitar 'não'."),
-            ('num_nf', "Legal! agora confirma os dados, volumes{}, peso{}, M³{},R$ {},Nota Fiscal Nº{} "),
-            # ('num_nf', "Legal! Agora vamos conferir o endereço da coleta. Me informa qual é o CEP?"),
-        ]
+        if not json_coletas[entidade]['confirmacao']:
+            campos = [
+                ('volumes', "Qual é a metragem desses volumes? Pode ser só da maior, tipo 1,0 x 0,59 x 0,89."),
+                ('m3', "Agora, qual é o peso total dessa carga?"),
+                ('peso', "Qual é o valor desses produtos?"),
+                ('valor_nf', "E o número da nota fiscal, você já tem? Se ainda não tiver, é só digitar 'não'."),
+                ('num_nf', "Ótimo! Agora, confirme os dados: Volumes: {}, Peso: {} kg, M³: {}, Valor: R$ {}, Nota Fiscal Nº {}. Está tudo correto ou deseja fazer alguma alteração? Digite 'alterar' para modificar os dados ou 'confirmar' para prosseguir."),
+            ]
+
+        else:
+            campos = [
+                ('volumes', "Ótimo! Agora, só para confirmar: Volumes: {}, Peso: {} kg, M³: {}, Valor: R$ {}, Nota Fiscal Nº {}. Tudo certo ou quer modificar alguma informação? (1) Volumes, (2) Peso, (3) M³, (4) Valor, (5) Nota Fiscal."),
+                ('m3', "Ótimo! Agora, só para confirmar: Volumes: {}, Peso: {} kg, M³: {}, Valor: R$ {}, Nota Fiscal Nº {}. Tudo certo ou quer modificar alguma informação? (1) Volumes, (2) Peso, (3) M³, (4) Valor, (5) Nota Fiscal."),
+                ('peso', "Ótimo! Agora, só para confirmar: Volumes: {}, Peso: {} kg, M³: {}, Valor: R$ {}, Nota Fiscal Nº {}. Tudo certo ou quer modificar alguma informação? (1) Volumes, (2) Peso, (3) M³, (4) Valor, (5) Nota Fiscal."),
+                ('valor_nf', "Ótimo! Agora, só para confirmar: Volumes: {}, Peso: {} kg, M³: {}, Valor: R$ {}, Nota Fiscal Nº {}. Tudo certo ou quer modificar alguma informação? (1) Volumes, (2) Peso, (3) M³, (4) Valor, (5) Nota Fiscal."),
+                ('num_nf', "Ótimo! Agora, só para confirmar: Volumes: {}, Peso: {} kg, M³: {}, Valor: R$ {}, Nota Fiscal Nº {}. Tudo certo ou quer modificar alguma informação? (1) Volumes, (2) Peso, (3) M³, (4) Valor, (5) Nota Fiscal."),
+                # ('num_nf', "Legal! Agora vamos conferir o endereço da coleta. Me informa qual é o CEP?"),
+            ]
+
 
         for campo, pergunta in campos:
             if json_coletas[entidade][campo] == '':
@@ -65,10 +96,13 @@ def carrega_dados_coleta(json_coletas,msg):
                 json_coletas['pergunta'] = pergunta.format(json_coletas[entidade].get('volumes'),json_coletas[entidade].get('peso'),
                                                            json_coletas[entidade].get('m3'),json_coletas[entidade].get('valor_nf')
                                                            ,json_coletas[entidade].get('num_nf'))
+                json_coletas[entidade]['confirmacao'] = False
+                json_coletas[entidade]['estado_finalizacao'] = 'aguardando'
                 return json_coletas
+            
+        json_coletas[entidade]['confirmacao'] = False
+        json_coletas[entidade]['estado_finalizacao'] = 'aguardando'
         return json_coletas
-
-
 
     def _cria_clientes(json_cliente):
         print('esta cirando o cliente no bd')
@@ -198,12 +232,54 @@ def carrega_dados_coleta(json_coletas,msg):
         return json_coletas
 
     json_coletas['pergunta'] = "Quantos volumes vão ser retirados?"
-
     campos_vazios = [campo for campo, valor in json_coletas['dados_coleta'].items() if valor == '']
     if len(campos_vazios)>0:
         _processa_dados_da_carga(json_coletas,'dados_coleta')
         return json_coletas
-    
+
+
+    if json_coletas['dados_coleta']['estado_finalizacao']=='aguardando':
+
+        if msg.lower() == 'confirmar':
+            json_coletas['dados_coleta']['estado_finalizacao'] = 'finalizado'
+            return json_coletas
+
+        if msg.lower() == 'alterar':
+            json_coletas['dados_coleta']['confirmacao'] = True
+            json_coletas['dados_coleta']['estado_finalizacao'] = 'editando'
+            json_coletas['pergunta'] = "Qual dado você deseja alterar? (1) Volumes, (2) Peso, (3) M³, (4) Valor, (5) Nota Fiscal."
+            # return json_coletas
+
+    if json_coletas['dados_coleta']['estado_finalizacao']=='editando':
+        match msg:
+            case '1':
+                json_coletas['dados_coleta']['volumes'] = ''
+                json_coletas['dados_coleta']['confirmacao'] = True
+                json_coletas['dados_coleta']['estado_finalizacao'] = 'aguardando'
+                return json_coletas
+            case '2':
+                json_coletas['dados_coleta']['peso'] = ''
+                json_coletas['dados_coleta']['confirmacao'] = True
+                json_coletas['dados_coleta']['estado_finalizacao'] = 'aguardando'
+
+                return json_coletas
+            case '3':
+                print('correcao m3')
+                json_coletas['dados_coleta']['m3'] = ''
+                json_coletas['dados_coleta']['confirmacao'] = True
+                json_coletas['dados_coleta']['estado_finalizacao'] = 'aguardando'
+                return json_coletas
+            case '4':
+                json_coletas['dados_coleta']['valor_nf'] = ''
+                json_coletas['dados_coleta']['confirmacao'] = True
+                json_coletas['dados_coleta']['estado_finalizacao'] = 'aguardando'
+                return json_coletas
+            case '5':
+                json_coletas['dados_coleta']['num_nf'] = ''
+                json_coletas['dados_coleta']['confirmacao'] = True
+                json_coletas['dados_coleta']['estado_finalizacao'] = 'aguardando'
+                return json_coletas
+
     return json_coletas    
 
 

@@ -27,7 +27,7 @@ def selecao_menu(estado_contato,msg,telefone):
                     case "1":
                         dados = {"remetente":{"cnpj":'',"razao":'','cep':'','rua':'','numero':'','complemento':'','bairro':'','cidade':'','uf':''},
                                 "destinatario":{"cnpj":'',"razao":'','cep':'','rua':'','numero':'','complemento':'','bairro':'','cidade':'','uf':''},
-                                "dados_coleta":{'volumes':'','peso':'','m3':'','valor_nf':'','num_nf':''},
+                                "dados_coleta":{'volumes':'','peso':'','m3':'','valor_nf':'','num_nf':'','confirmacao':False},
                                 "contato":{'telefone':'','nome':''},
                                 "observacao":'',
                                 "endereco_coleta":{'cep':'','rua':'','num':'','complemento':'',
