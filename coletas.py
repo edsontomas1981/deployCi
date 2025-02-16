@@ -1,6 +1,7 @@
 from conexao import get_db,close_connection
 from utils import documento_e_valido,busca_cnpj_ws,remove_caracteres_cnpj_cpf
 from clientes import get_cliente_by_cnpj,create_cliente
+from cep import busca_cep
 
 def create_coleta(coleta):
     db = get_db()
@@ -64,12 +65,30 @@ def _processa_carga(json_coletas,entidade,msg,campos):
             return json_coletas
     return json_coletas
 
-
 def carrega_dados_coleta(json_coletas,msg):
 
     cnpj_formatado = remove_caracteres_cnpj_cpf(msg)
 
+    def _processa_proximo_campo(json_coletas,entidade, campos, campo_atual):
+        
+        for campo in campos:
+            if json_coletas[entidade][campo] == '' and campo != campo_atual :
+                return campo
+        
+        return None
+    
+    def _processa_campo_atual(json_coletas,entidade, campos):
+        
+        for campo in campos:
+            if json_coletas[entidade][campo] == '':
+                return campo
+        
+        return None
+            
+
+
     def _processa_dados_da_carga(json_coletas,entidade):
+        print(f'Dados Da Carga {json_coletas['pergunta']}')
         if not json_coletas[entidade]['confirmacao']:
             campos = [
                 ('volumes', "Qual é a metragem desses volumes? Pode ser só da maior, tipo 1,0 x 0,59 x 0,89."),
@@ -81,11 +100,11 @@ def carrega_dados_coleta(json_coletas,msg):
 
         else:
             campos = [
-                ('volumes', "Ótimo! Agora, só para confirmar: Volumes: {}, Peso: {} kg, M³: {}, Valor: R$ {}, Nota Fiscal Nº {}. Tudo certo ou quer modificar alguma informação? (1) Volumes, (2) Peso, (3) M³, (4) Valor, (5) Nota Fiscal."),
-                ('m3', "Ótimo! Agora, só para confirmar: Volumes: {}, Peso: {} kg, M³: {}, Valor: R$ {}, Nota Fiscal Nº {}. Tudo certo ou quer modificar alguma informação? (1) Volumes, (2) Peso, (3) M³, (4) Valor, (5) Nota Fiscal."),
-                ('peso', "Ótimo! Agora, só para confirmar: Volumes: {}, Peso: {} kg, M³: {}, Valor: R$ {}, Nota Fiscal Nº {}. Tudo certo ou quer modificar alguma informação? (1) Volumes, (2) Peso, (3) M³, (4) Valor, (5) Nota Fiscal."),
-                ('valor_nf', "Ótimo! Agora, só para confirmar: Volumes: {}, Peso: {} kg, M³: {}, Valor: R$ {}, Nota Fiscal Nº {}. Tudo certo ou quer modificar alguma informação? (1) Volumes, (2) Peso, (3) M³, (4) Valor, (5) Nota Fiscal."),
-                ('num_nf', "Ótimo! Agora, só para confirmar: Volumes: {}, Peso: {} kg, M³: {}, Valor: R$ {}, Nota Fiscal Nº {}. Tudo certo ou quer modificar alguma informação? (1) Volumes, (2) Peso, (3) M³, (4) Valor, (5) Nota Fiscal."),
+                ('volumes', "Perfeito! Agora, revise os dados: Volumes: {}, Peso: {} kg, M³: {}, Valor: R$ {}, Nota Fiscal Nº {}. Está tudo certo ou precisa ajustar algo? Digite 'alterar' para modificar ou 'confirmar' para continuar."),
+                ('m3', "Ótimo! Confira os dados informados: Volumes: {}, Peso: {} kg, M³: {}, Valor: R$ {}, Nota Fiscal Nº {}. Caso precise corrigir algo, digite 'alterar'. Para seguir, digite 'confirmar'."),
+                ('peso', "Tudo certo até aqui! Veja os detalhes: Volumes: {}, Peso: {} kg, M³: {}, Valor: R$ {}, Nota Fiscal Nº {}. Se precisar mudar algo, digite 'alterar'. Para continuar, digite 'confirmar'."),
+                ('valor_nf', "Estamos quase lá! Verifique os dados abaixo: Volumes: {}, Peso: {} kg, M³: {}, Valor: R$ {}, Nota Fiscal Nº {}. Caso precise editar, digite 'alterar'. Se estiver correto, digite 'confirmar'."),
+                ('num_nf', "Revise as informações: Volumes: {}, Peso: {} kg, M³: {}, Valor: R$ {}, Nota Fiscal Nº {}. Tudo certo? Digite 'alterar' para corrigir ou 'confirmar' para avançar."),
                 # ('num_nf', "Legal! Agora vamos conferir o endereço da coleta. Me informa qual é o CEP?"),
             ]
 
@@ -138,6 +157,48 @@ def carrega_dados_coleta(json_coletas,msg):
             json_coletas[entidade]['uf'] = cliente[9]
             json_coletas['pergunta'] = pergunta
         return json_coletas  # Retorna o objeto atualizado
+    
+    def _processar_endereco_coleta(json_coletas, msg, entidade):
+        """
+        Processa os dados de uma entidade (remetente, tomador, destinatário) e atualiza json_coletas com a próxima pergunta.
+        """
+
+        if json_coletas[entidade]['cep'] == '':
+            cep = busca_cep(msg)
+            json_coletas[entidade]['baixado'] = True
+            json_coletas[entidade]['cep'] = cep.get('cep')
+            json_coletas[entidade]['rua'] = cep.get('street')
+            json_coletas[entidade]['bairro'] = cep.get('neighborhood')
+            json_coletas[entidade]['cidade'] = cep.get('city')
+            json_coletas[entidade]['uf'] = cep.get('state')
+            json_coletas['pergunta'] = "Agora me fala o número do endereço."
+
+            return json_coletas
+
+        if json_coletas[entidade]['baixado']:
+            campos = [
+                ('cep', "E a rua, qual é?"),
+                ('rua', "Agora me fala o número do endereço."),
+                ('num', "Tem algum complemento? Se não tiver, só digita 'não'."),
+                ('complemento', "E o bairro, qual é?"),
+                ('bairro', "Agora me diz a cidade."),
+                ('cidade', "E qual é o estado?"),
+                ('uf', "Ótimo! Agora, confirme os dados: Volumes: {}, Peso: {} kg, M³: {}, Valor: R$ {}, Nota Fiscal Nº {}. Está tudo correto ou deseja fazer alguma alteração? Digite 'alterar' para modificar os dados ou 'confirmar' para prosseguir.")
+            ]
+        else:
+            campos = [  
+                ('num', "Tem algum complemento? Se não tiver, só digita 'não'."),
+                ('complemento', "E o bairro, qual é?"),
+            ]
+
+
+        for campo, pergunta in campos:
+            if json_coletas[entidade][campo] == '':
+                json_coletas[entidade][campo] = msg.lower()
+                json_coletas['pergunta'] = pergunta.format(entidade)
+                return json_coletas
+
+        return json_coletas
 
     def processar_entidade(json_coletas, msg, entidade,pergunta):
         """
@@ -231,24 +292,22 @@ def carrega_dados_coleta(json_coletas,msg):
         processar_dados(json_coletas,msg,campos_vazios,'destinatario',"Quantos volumes vão ser retirados?")
         return json_coletas
 
-    json_coletas['pergunta'] = "Quantos volumes vão ser retirados?"
     campos_vazios = [campo for campo, valor in json_coletas['dados_coleta'].items() if valor == '']
     if len(campos_vazios)>0:
         _processa_dados_da_carga(json_coletas,'dados_coleta')
         return json_coletas
 
-
     if json_coletas['dados_coleta']['estado_finalizacao']=='aguardando':
 
         if msg.lower() == 'confirmar':
             json_coletas['dados_coleta']['estado_finalizacao'] = 'finalizado'
+            json_coletas['pergunta'] = "Me passa o CEP da coleta, por favor!"
             return json_coletas
 
         if msg.lower() == 'alterar':
             json_coletas['dados_coleta']['confirmacao'] = True
             json_coletas['dados_coleta']['estado_finalizacao'] = 'editando'
             json_coletas['pergunta'] = "Qual dado você deseja alterar? (1) Volumes, (2) Peso, (3) M³, (4) Valor, (5) Nota Fiscal."
-            # return json_coletas
 
     if json_coletas['dados_coleta']['estado_finalizacao']=='editando':
         match msg:
@@ -256,29 +315,81 @@ def carrega_dados_coleta(json_coletas,msg):
                 json_coletas['dados_coleta']['volumes'] = ''
                 json_coletas['dados_coleta']['confirmacao'] = True
                 json_coletas['dados_coleta']['estado_finalizacao'] = 'aguardando'
+                json_coletas['pergunta'] = "Me diz aí, quantos volumes vão ser retirados?"
                 return json_coletas
             case '2':
                 json_coletas['dados_coleta']['peso'] = ''
                 json_coletas['dados_coleta']['confirmacao'] = True
                 json_coletas['dados_coleta']['estado_finalizacao'] = 'aguardando'
-
+                json_coletas['pergunta'] = "Beleza! Agora me diz o peso correto em kg."
                 return json_coletas
             case '3':
-                print('correcao m3')
                 json_coletas['dados_coleta']['m3'] = ''
                 json_coletas['dados_coleta']['confirmacao'] = True
                 json_coletas['dados_coleta']['estado_finalizacao'] = 'aguardando'
+                json_coletas['pergunta'] = "Ótimo! Agora me diz as dimensões corretas."
                 return json_coletas
             case '4':
                 json_coletas['dados_coleta']['valor_nf'] = ''
                 json_coletas['dados_coleta']['confirmacao'] = True
                 json_coletas['dados_coleta']['estado_finalizacao'] = 'aguardando'
+                json_coletas['pergunta'] = "Legal! Agora me diz o valor correto da nota fiscal."
                 return json_coletas
             case '5':
                 json_coletas['dados_coleta']['num_nf'] = ''
                 json_coletas['dados_coleta']['confirmacao'] = True
                 json_coletas['dados_coleta']['estado_finalizacao'] = 'aguardando'
+                json_coletas['pergunta'] = "Legal! Agora me diz o número correto da nota fiscal."
                 return json_coletas
+    
+    json_coletas['pergunta'] = "Me passa o CEP da coleta, por favor!"
+
+    dict_verificacao = {'cep': "Me passa o CEP da coleta, por favor!",
+        'rua': "E a rua, qual é?",
+        'num':"Agora me fala o número do endereço.",
+        'complemento':  "Tem algum complemento? Se não tiver, só digita 'não'.",        
+        'bairro':"E o bairro, qual é?",
+        'cidade':  "Agora me diz a cidade.",
+        'uf':"E qual é o estado?",
+        'dados_coleta': 'dados_coleta',
+        'pergunta_final':  "Agora me confirma o Cep do destino.",
+    }
+
+
+    campos_endereco_entrega = ['cep','rua','num','complemento','bairro','cidade','bairro','uf']
+    
+    if json_coletas['endereco_coleta']['cep'] == '':
+        cep = busca_cep(msg)
+        json_coletas['endereco_coleta']['cep'] = cep.get('cep')
+        json_coletas['endereco_coleta']['rua'] = cep.get('street')
+        json_coletas['endereco_coleta']['bairro'] = cep.get('neighborhood')
+        json_coletas['endereco_coleta']['cidade'] = cep.get('city')
+        json_coletas['endereco_coleta']['uf'] = cep.get('state')
+        campo_atual = _processa_campo_atual(json_coletas,'endereco_coleta',campos_endereco_entrega)
+        json_coletas['pergunta'] =  dict_verificacao[campo_atual]
+        return json_coletas
+
+
+    campo_atual = _processa_campo_atual(json_coletas,'endereco_coleta',campos_endereco_entrega)
+
+    proximo_campo = _processa_proximo_campo(json_coletas, 'endereco_coleta', campos_endereco_entrega, campo_atual)
+
+    print(f'Campo Aatual : {campo_atual} Mensagem : {msg}')
+
+    if campo_atual:
+        if not proximo_campo:
+            json_coletas['pergunta'] =  dict_verificacao['pergunta_final']
+            json_coletas['endereco_coleta'][campo_atual] = msg
+            return json_coletas
+        else:
+            json_coletas['pergunta'] =  dict_verificacao[proximo_campo]
+            json_coletas['endereco_coleta'][campo_atual] = msg
+            return json_coletas
+
+    # campos_vazios = [campo for campo, valor in json_coletas['endereco_coleta'].items() if valor == '']
+    # if len(campos_vazios)>0:
+    #     _processar_endereco_coleta(json_coletas,msg,'endereco_coleta')
+    #     return json_coletas
 
     return json_coletas    
 

@@ -20,6 +20,8 @@ from cadastro_contatos import cadastrar_contatos
 from menu import gerar_menu,selecao_menu
 from messages import create_mensagem
 from coletas import carrega_dados_coleta
+from utils import busca_cep_ws
+from carrega_coordenadas import carrega_coordenadas
 
 
 app = Flask(__name__, template_folder='templates', static_folder='static')
@@ -82,32 +84,6 @@ def handle_mensagens (data):
 
     return jsonify({"resposta": 'resposta'})
 
-# def handle_message(data):
-
-#     contato = carrega_contato(data.get('phone'),data.get('nome'))  # Carrega ou cria o contato
-#     contato.add_messages_sent(data.get('msg'))  # Adiciona a mensagem à lista 'sent'
-
-#     print(len(contato.messages['sent']))
-#     if contato.state == 'aberto':
-#         if len(contato.messages['sent'])>1:
-#             if data.get('msg') == 'coleta':
-#                 contato.state = 'coleta'
-#                 send('Digite o número do pedido para coletas:')
-#                 return
-#             elif data.get('msg') == 'cte':
-#                 contato.state = 'cte'
-#                 send('Digite o número do pedido para cte:')
-#                 return
-#             else:
-#                 send('Opção inválida. Por favor, escolha uma das opções acima.')
-#         else:
-#             send('Olá! No que posso ajudar hoje?\n\n1 - Realizar coletas\n2 - Consultar notas fiscais\n\nPor favor, escolha uma das opções acima.')
-
-
-    
-    # Agora as mensagens enviadas devem ser acumuladas corretamente.
-    # print(contato.messages.get('sent'))  # Mostra todas as mensagens enviadas até agora.
-
 def enviar_mensagem_para_cliente():
     url = "https://graph.facebook.com/v21.0/559569933902545/messages"
 
@@ -139,7 +115,9 @@ def enviar_mensagem_para_cliente():
 # Rota principal para carregar a interface do chat
 @app.route('/chat')
 def chat():
-    enviar_mensagem_para_cliente()
+    # enviar_mensagem_para_cliente()
+    status_code,json_endereco = busca_cep_ws('07243180')
+    print(f"Coordenadas : {json_endereco.get('location').get('coordinates')}")
     return render_template('chat.html')
 
 @app.route('/favicon.ico')
