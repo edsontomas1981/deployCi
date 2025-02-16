@@ -374,8 +374,6 @@ def carrega_dados_coleta(json_coletas,msg):
 
     proximo_campo = _processa_proximo_campo(json_coletas, 'endereco_coleta', campos_endereco_entrega, campo_atual)
 
-    print(f'Campo Aatual : {campo_atual} Mensagem : {msg}')
-
     if campo_atual:
         if not proximo_campo:
             json_coletas['pergunta'] =  dict_verificacao['pergunta_final']
