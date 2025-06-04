@@ -5,5 +5,7 @@ def busca_cep(cep):
     status, json_cep = busca_cep_ws(cep)
     if status == 200:
         return json_cep
+    else:
+        return None
     
     

@@ -1,36 +1,46 @@
-from flask import Flask, request, jsonify,send_file, render_template
-from flask_cors import CORS
-import sqlite3
+# Standard library imports
 import json
-from impressao_ci import imprimir_ci
-from iscas import localiza_iscas
-from funcoes_pega_coleta import webscrap_coletas,webscrap_coletas_lote,download_coletas
-from funcoes_baixa_cte import ctes_lote,processar_download_pdfs
-from flask_socketio import SocketIO, send, emit, join_room
-from flask import send_from_directory
+import logging
 import os
 import shutil
+import sqlite3
+import tempfile
 import zipfile
+
+# Third party imports
+import pandas as pd
+import pdfplumber
 import requests
-import json
+from flask import Flask, jsonify, render_template, request, send_file, send_from_directory
+from flask_cors import CORS
+from flask_socketio import SocketIO, emit, join_room, send
 
-from contatos import create_contato,get_contato_by_fone,update_contato_nome
-from estados_contatos import get_estado_contato_by_telefone,create_estado_contato,update_estado_contato
+# Local application imports
 from cadastro_contatos import cadastrar_contatos
-from menu import gerar_menu,selecao_menu
-from messages import create_mensagem
-from coletas import carrega_dados_coleta
-from utils import busca_cep_ws
 from carrega_coordenadas import carrega_coordenadas
-
+from coletas import fluxo_coletas
+from comparar_dados_notas import comparar_dados_notas
+from contatos import create_contato, get_contato_by_fone, update_contato_nome
+from estados_contatos import (create_estado_contato, get_estado_contato_by_telefone,
+                          update_estado_contato)
+from extrair_notas_por_pedido import extrair_notas_por_pedido
+from funcoes_baixa_cte import ctes_lote, processar_download_pdfs
+from funcoes_pega_coleta import download_coletas, webscrap_coletas, webscrap_coletas_lote
+from impressao_ci import imprimir_ci
+from iscas import localiza_iscas
+from ler_planilha_sem_cabecalho import ler_planilha_sem_cabecalho
+from menu import gerar_menu, selecao_menu
+from messages import create_mensagem
+from utils import busca_cep_ws
 
 app = Flask(__name__, template_folder='templates', static_folder='static')
+logging.getLogger("pdfminer").setLevel(logging.ERROR)
+
 
 # Permitir CORS para qualquer origem
-# CORS(app, resources={r"/*": {"origins": "*"}})
+CORS(app, resources={r"/*": {"origins": "*"}})
 
 socketio = SocketIO(app, cors_allowed_origins="*")  # Permitir conexões de qualquer origem
-
 
 DATABASE = 'bd_norte.db'
 
@@ -46,41 +56,41 @@ def handle_mensagens (data):
         try:
             create_contato(telefone)
             create_estado_contato((telefone, 0,mensagem,1 ))
-            create_mensagem(telefone,mensagem)   
+            create_mensagem(telefone,mensagem)
             send("Olá! Percebi que ainda não sei o seu nome.  Para que possamos atendê-lo melhor, você poderia me informar o seu nome, por favor?")
         except:
             send("Ops, ocorreu um erro! Por favor, tente novamente mais tarde. 😊")
         return
-    
-    create_mensagem(telefone,mensagem)                    
+
+    create_mensagem(telefone,mensagem)
     contato = get_contato_by_fone(telefone)
 
     match str(estado_contato[1]):
         case "0":
             match str(estado_contato[4]):
-                case '1':   
+                case '1':
                     update_estado_contato(telefone, 1, 1, mensagem)
                     update_contato_nome(telefone, mensagem)
                     contato = get_contato_by_fone(telefone)
                     send(f'Olá, {contato[3]}! Tudo bem? Vou te mostrar o nosso menu de opções. 😊 {gerar_menu()}')
-                    return  
+                    return
 
         case "1":
             match str(estado_contato[4]):
                 case '1': # Selecione a opcao
-                    send(selecao_menu(estado_contato,mensagem,telefone))                
+                    send(selecao_menu(estado_contato,mensagem,telefone))
 
         case "2":
             estado_contato = get_estado_contato_by_telefone(telefone)
             json_atual = (json.loads(estado_contato[2]))
-            temp_json = carrega_dados_coleta(json_atual,mensagem)
-            
+            temp_json = fluxo_coletas.main_coletas(json_atual,mensagem)
+
             if temp_json:
                 json_atual = temp_json
-           
+
             update_estado_contato(telefone, 2, 0,json.dumps(json_atual))
             send(json_atual.get('pergunta'))
-   
+
 
     return jsonify({"resposta": 'resposta'})
 
@@ -143,6 +153,10 @@ def entradaNfs():
 @app.route('/novoInicio', methods=['GET'])
 def newIndex():
     return render_template('novo.html')
+
+@app.route('/conferencia', methods=['GET'])
+def conferencia():
+    return render_template('conferencia.html')
 
 @app.route('/template', methods=['GET'])
 def template():
@@ -340,6 +354,10 @@ def select_ci():
 def home_ctes():
     return render_template('baixarCtes.html')
 
+@app.route('/cadastrar_romaneio', methods=['GET'])
+def cadastrar_romaneio():
+    return render_template('cadastrar_romaneio.html')
+
 @app.route('/baixar_coletas_lote', methods=['POST'])
 def baixar_coletas_lote():
     numero_pedidos = request.get_json()
@@ -368,9 +386,6 @@ def baixar_ctes_lote():
         # Obter o número dos CTEs (presumindo que seja enviado via JSON)
         numero_ctes = request.get_json()
 
-        erros = [1,2,3]
-
-        sucessos = [1,2,3]
         # Gerar o diretório de download
         zip_filename,arquivos_sucesso,arquivos_erro = ctes_lote(USUARIO, SENHA, numero_ctes)
 
@@ -381,14 +396,14 @@ def baixar_ctes_lote():
         }
 
         # Enviar o ZIP no corpo da resposta e o JSON nos headers
-        response = send_file(zip_filename, as_attachment=True, download_name='coletas_lote.zip', mimetype='application/zip')
-        response.headers['X-Status-Json'] = json.dumps(status_json)  # ✅ CORRETO
-        return response
+        # response = send_file(zip_filename, as_attachment=True, download_name='coletas_lote.zip', mimetype='application/zip')
+        # response.headers['X-Status-Json'] = json.dumps(status_json)  # ✅ CORRETO
+        # return response
 
-        # return send_file(zip_filename, as_attachment=True, download_name='ctes_lote.zip', mimetype='application/zip')
+        send_file(zip_filename, as_attachment=True, download_name='ctes_lote.zip', mimetype='application/zip')
+        return jsonify({'detalhes': status_json}), 200
 
     except Exception as e:
-        print(f"Erro ao baixar os CTEs: {e}")
         return jsonify({'status': 'Erro durante o processo'}), 500
 
 # Rota para receber mensagens da API do WhatsApp
@@ -426,6 +441,220 @@ def webhook():
                             print(f"Mensagem de {phone_number}: {message_text}")
 
         return jsonify({"status": "success"}), 200
-    
+
+@app.route('/upload', methods=['POST'])
+def upload_arquivos():
+    if 'pdf' not in request.files or 'planilha' not in request.files:
+        return jsonify({"erro": "É necessário enviar um arquivo PDF e um de planilha."}), 400
+
+    pdf_file = request.files['pdf']
+    planilha_file = request.files['planilha']
+
+    # Salva arquivos temporários
+    with tempfile.NamedTemporaryFile(delete=False, suffix=".pdf") as temp_pdf:
+        pdf_file.save(temp_pdf.name)
+        caminho_pdf = temp_pdf.name
+
+    ext_planilha = os.path.splitext(planilha_file.filename)[1]
+    with tempfile.NamedTemporaryFile(delete=False, suffix=ext_planilha) as temp_planilha:
+        planilha_file.save(temp_planilha.name)
+        caminho_planilha = temp_planilha.name
+
+    try:
+        dados_pdf = extrair_notas_por_pedido(caminho_pdf)
+        dados_planilha = ler_planilha_sem_cabecalho(caminho_planilha)
+        resultado = comparar_dados_notas(dados_pdf, dados_planilha)
+    except Exception as e:
+        return jsonify({"erro": str(e)}), 500
+    finally:
+        os.remove(caminho_pdf)
+        os.remove(caminho_planilha)
+
+    return jsonify(resultado)
+
+# CREATE - inserir novo romaneio
+@app.route('/romaneios', methods=['POST'])
+def criar_romaneio():
+    data = request.get_json()
+    try:
+        conn = get_db_connection()
+        cur = conn.cursor()
+        cur.execute("""
+            INSERT INTO romaneio (id_romaneio, not_fis, vols, peso, valor_not_fis)
+            VALUES (?, ?, ?, ?, ?)
+        """, (
+            data['id_romaneio'],
+            data['not_fis'],
+            data['vols'],
+            data['peso'],
+            data['valor_not_fis']
+        ))
+        conn.commit()
+        novo_id = cur.lastrowid
+        conn.close()
+        return jsonify({"id": novo_id, "mensagem": "Romaneio criado com sucesso"}), 201
+    except Exception as e:
+        return jsonify({"erro": str(e)}), 500
+
+# READ - listar todos
+@app.route('/romaneios', methods=['GET'])
+def listar_romaneios():
+    try:
+        conn = get_db_connection()
+        cur = conn.cursor()
+        cur.execute("SELECT * FROM romaneio")
+        colunas = [desc[0] for desc in cur.description]
+        dados = [dict(zip(colunas, row)) for row in cur.fetchall()]
+        conn.close()
+        return jsonify(dados)
+    except Exception as e:
+        return jsonify({"erro": str(e)}), 500
+
+# READ - obter por ID
+@app.route('/romaneios/<int:id>', methods=['GET'])
+def obter_romaneio(id):
+    try:
+        conn = get_db_connection()
+        cur = conn.cursor()
+        cur.execute("SELECT * FROM romaneio WHERE id = ?", (id,))
+        row = cur.fetchone()
+        conn.close()
+        if row:
+            colunas = ["id", "id_romaneio", "not_fis", "vols", "peso", "valor_not_fis"]
+            return jsonify(dict(zip(colunas, row)))
+        else:
+            return jsonify({"erro": "Romaneio não encontrado"}), 404
+    except Exception as e:
+        return jsonify({"erro": str(e)}), 500
+
+# UPDATE - atualizar
+@app.route('/romaneios/<int:id>', methods=['PUT'])
+def atualizar_romaneio(id):
+    data = request.get_json()
+    try:
+        conn = get_db_connection()
+        cur = conn.cursor()
+        cur.execute("""
+            UPDATE romaneio
+            SET id_romaneio = ?, not_fis = ?, vols = ?, peso = ?, valor_not_fis = ?
+            WHERE id = ?
+        """, (
+            data['id_romaneio'],
+            data['not_fis'],
+            data['vols'],
+            data['peso'],
+            data['valor_not_fis'],
+            id
+        ))
+        conn.commit()
+        conn.close()
+        return jsonify({"mensagem": "Romaneio atualizado com sucesso"})
+    except Exception as e:
+        return jsonify({"erro": str(e)}), 500
+
+# DELETE - remover
+@app.route('/romaneios/<int:id>', methods=['DELETE'])
+def deletar_romaneio(id):
+    try:
+        conn = get_db_connection()
+        cur = conn.cursor()
+        cur.execute("DELETE FROM romaneio WHERE id = ?", (id,))
+        conn.commit()
+        conn.close()
+        return jsonify({"mensagem": "Romaneio deletado com sucesso"})
+    except Exception as e:
+        return jsonify({"erro": str(e)}), 500
+
+
+# CREATE - inserir nova cidade
+@app.route('/cidades_atendidas', methods=['POST'])
+def criar_cidade():
+    data = request.get_json()
+    try:
+        conn = get_db_connection()
+        cur = conn.cursor()
+        cur.execute("""
+            INSERT INTO cidades_atendidas (cidade, filial_responsavel)
+            VALUES (?, ?)
+        """, (
+            data['cidade'],
+            data['filial_responsavel']
+        ))
+        conn.commit()
+        novo_id = cur.lastrowid
+        conn.close()
+        return jsonify({"id": novo_id, "mensagem": "Cidade criada com sucesso"}), 201
+    except Exception as e:
+        return jsonify({"erro": str(e)}), 500
+
+# READ - listar todas
+@app.route('/listar_cidades_atendidas', methods=['GET'])
+def listar_cidades():
+    try:
+        conn = get_db_connection()
+        cur = conn.cursor()
+        cur.execute("SELECT * FROM cidades_atendidas ORDER BY cidade")
+        colunas = [desc[0] for desc in cur.description]
+        dados = [dict(zip(colunas, row)) for row in cur.fetchall()]
+        conn.close()
+        return jsonify(dados)
+
+    except Exception as e:
+        print(e)
+        return jsonify({"erro": str(e)}), 500
+
+# READ - obter por ID
+@app.route('/listar_cidades_atendidas/<int:id>', methods=['GET'])
+def obter_cidade(id):
+    try:
+        conn = get_db_connection()
+        cur = conn.cursor()
+        cur.execute("SELECT * FROM cidades_atendidas WHERE id = ?", (id,))
+        row = cur.fetchone()
+        conn.close()
+        if row:
+            colunas = ["id", "cidade", "filial_responsavel"]
+            return jsonify(dict(zip(colunas, row)))
+        else:
+            return jsonify({"erro": "Cidade não encontrada"}), 404
+    except Exception as e:
+        return jsonify({"erro": str(e)}), 500
+
+# UPDATE - atualizar
+@app.route('/listar_cidades_atendidas/<int:id>', methods=['PUT'])
+def atualizar_cidade(id):
+    data = request.get_json()
+    try:
+        conn = get_db_connection()
+        cur = conn.cursor()
+        cur.execute("""
+            UPDATE cidades_atendidas
+            SET cidade = ?, filial_responsavel = ?
+            WHERE id = ?
+        """, (
+            data['cidade'],
+            data['filial_responsavel'],
+            id
+        ))
+        conn.commit()
+        conn.close()
+        return jsonify({"mensagem": "Cidade atualizada com sucesso"})
+    except Exception as e:
+        return jsonify({"erro": str(e)}), 500
+
+# DELETE - remover
+@app.route('/listar_cidades_atendidas/<int:id>', methods=['DELETE'])
+def deletar_cidade(id):
+    try:
+        conn = get_db_connection()
+        cur = conn.cursor()
+        cur.execute("DELETE FROM cidades_atendidas WHERE id = ?", (id,))
+        conn.commit()
+        conn.close()
+        return jsonify({"mensagem": "Cidade deletada com sucesso"})
+    except Exception as e:
+        return jsonify({"erro": str(e)}), 500
+
+
 if __name__ == "__main__":
     socketio.run(app, host="0.0.0.0", port=5000, debug=True)

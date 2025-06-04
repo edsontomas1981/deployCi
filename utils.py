@@ -287,3 +287,16 @@ def busca_cep_ws(cep):
         return response.status_code, response.json()
     except:
         return None,None
+    
+def validar_cep(cep: str) -> bool:
+    """
+    Valida um CEP brasileiro.
+
+    Parâmetros:
+        cep (str): O CEP a ser validado. Pode estar no formato 'XXXXX-XXX' ou 'XXXXXXXX'.
+
+    Retorno:
+        bool: True se o CEP for válido, False caso contrário.
+    """
+    padrao = r"^\d{5}-?\d{3}$"
+    return bool(re.match(padrao, cep))

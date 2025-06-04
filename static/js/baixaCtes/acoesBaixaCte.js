@@ -74,44 +74,46 @@ async function enviarLote() {
     try {
 
         showLoaderSweet('🚀 Segura aí! Estamos baixando seus arquivos rapidinho... 📂💨');
-       
+
         let apiService = new ApiService(BASEURL);
 
         await apiService.downloadFile('baixar_ctes_lote', ctes)
-        .then(response => {            
+        .then(response => {
             hideLoaderSweet();
-    
+
             // Verifica se há detalhes na resposta
-            if (response.detalhes) {
-                const { arquivos_sucesso, arquivos_erro } = response.detalhes;
-    
-                console.log("Arquivo baixado:", response.arquivo);
-                console.log("Arquivos gerados com sucesso:", arquivos_sucesso);
-                console.log("Arquivos com erro:", arquivos_erro);
-    
-                // Se houver arquivos com erro, exibe a mensagem
-                if (arquivos_erro.length > 0) {
-                    const errosFormatados = arquivos_erro.map(erro => `📌 ${erro}`).join('<br>');
-                    Swal.fire({
-                        icon: 'warning',
-                        title: '⚠️ Atenção!',
-                        html: `Alguns arquivos apresentaram erro:<br><br>${errosFormatados}`,
-                    });
-                } else {
-                    Swal.fire('🎉 Sucesso!', 'Os arquivos foram baixados com sucesso! 😎', 'success');
-                }
-    
-                limpaListaCtes();
+            // if (response.detalhes) {
+
+            const { arquivos_sucesso, arquivos_erro } = response.detalhes;
+
+            console.log("Arquivo baixado:", response.arquivo);
+            console.log("Arquivos gerados com sucesso:", arquivos_sucesso);
+            console.log("Arquivos com erro:", arquivos_erro);
+
+            // Se houver arquivos com erro, exibe a mensagem
+            if (arquivos_erro.length > 0) {
+                const errosFormatados = arquivos_erro.map(erro => `📌 ${erro}`).join('<br>');
+                Swal.fire({
+                    icon: 'warning',
+                    title: '⚠️ Atenção!',
+                    html: `Alguns arquivos apresentaram erro:<br><br>${errosFormatados}`,
+                });
             } else {
-                // Caso a resposta não tenha os detalhes esperados
-                Swal.fire('❌ Erro!', 'A resposta do servidor não está no formato esperado.', 'error');
+                Swal.fire('🎉 Sucesso!', 'Os arquivos foram baixados com sucesso! 😎', 'success');
             }
+
+            limpaListaCtes();
+            // }
+            //  else {
+            //     // Caso a resposta não tenha os detalhes esperados
+            //     Swal.fire('❌ Erro!', 'A resposta do servidor não está no formato esperado.', 'error');
+            // }
         })
         .catch(error => {
             console.error("Erro ao baixar:", error);
             Swal.fire('❌ Erro!', 'Ocorreu um erro ao baixar os arquivos.', 'error');
         });
-   
+
 
     } catch (error) {
         console.error(`Erro ao baixar a coleta`, error);
@@ -150,7 +152,7 @@ async function enviarLote() {
     //         showLoaderSweet('🚀 Segura aí! Estamos baixando seus arquivos rapidinho... 📂💨');
     //         // Instanciar o serviço de API
     //         let apiService = new ApiService(BASEURL);
-            
+
 
     //         // Executar o processo de download
     //         let response = apiService.downloadFile('baixar_ctes_lote', ctes)

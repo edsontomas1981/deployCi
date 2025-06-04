@@ -25,19 +25,19 @@ def selecao_menu(estado_contato,msg,telefone):
         case "1":
                 match msg:
                     case "1":
-                        dados = {"remetente":{"cnpj":'',"razao":'','cep':'','rua':'','numero':'','complemento':'','bairro':'','cidade':'','uf':''},
+                        dados = {"remetente":{"cnpj":'',"razao":'','cep':'','rua':'','numero':'','complemento':'','bairro':'','cidade':'','uf':'','state':'aguardando'},
                                 "destinatario":{"cnpj":'',"razao":'','cep':'','rua':'','numero':'','complemento':'','bairro':'','cidade':'','uf':''},
                                 "dados_coleta":{'volumes':'','peso':'','m3':'','valor_nf':'','num_nf':'','confirmacao':False},
                                 "contato":{'telefone':'','nome':''},
                                 "observacao":'',
                                 "endereco_coleta":{'cep':'','rua':'','num':'','complemento':'',
-                                                    'bairro':'','cidade':'','uf':''},
+                                                    'bairro':'','cidade':'','uf':'','state':'gerando'},
                                 "endereco_entrega":{'cep':'','rua':'','num':'','complemento':'',
-                                                    'bairro':'','cidade':'','uf':''},
+                                                    'bairro':'','cidade':'','uf':'','state':'gerando'},
                                 "pergunta": "Me passa o CNPJ do remetente."
                                 }
                         update_estado_contato(telefone,2,0,json.dumps(dados))
-                        return f"Qual o CNPJ do remetente?"
+                        return "Beleza! Primeiro, me passa o CEP de onde a mercadoria será coletada."
                     case "2":
                         update_estado_contato(telefone,3,0,json.dumps({'msg':'Dados','text':'treo'}))
                         return f"Cotação"

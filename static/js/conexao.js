@@ -1,4 +1,4 @@
-const BASEURL = "http://127.0.0.1:5000";
+const BASEURL = "http://192.168.15.42:5000";
 
 // const BASEURL = "https://sistransportslog.tech/";
 
@@ -131,11 +131,11 @@ class ApiService {
             },
             body: JSON.stringify(data)
         });
-    
+
         // Obtém os detalhes do processamento a partir do cabeçalho
         const statusJson = response.headers.get("X-Status-Json");
         const statusData = statusJson ? JSON.parse(statusJson) : null;
-    
+
         // Se a resposta for um ZIP, faz o download do arquivo
         if (response.ok && response.headers.get("Content-Type").includes("application/zip")) {
             const blob = await response.blob();
@@ -146,19 +146,19 @@ class ApiService {
             document.body.appendChild(a);
             a.click();
             a.remove();
-    
+
             return {
                 status: "Download concluído",
                 arquivo: "ctes_lote.zip",
                 detalhes: statusData // Retorna os detalhes dos arquivos processados
             };
         }
-    
+
         // Se não for um ZIP, retorna erro
         const errorMessage = await response.text();
         throw new Error(errorMessage);
     }
-    
+
 
 
 }

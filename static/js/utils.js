@@ -10,7 +10,7 @@ function getWordsFromTextarea(textareaId) {
         console.error("Textarea não encontrado!");
         return [];
     }
-    
+
     const text = textarea.value;
 
     // Divide o texto em palavras, considerando espaços e enter como delimitadores
@@ -42,16 +42,24 @@ function ordenarPorCidade(json) {
     return json.sort((a, b) => a.cidade.localeCompare(b.cidade));
 }
 
-// Função que realiza a busca no JSON por trechos do nome da cidade, desconsiderando os acentos
-function buscarCidade(json, cidadeBuscada) {
+function buscarCidade(dados, cidadeBuscada) {
     // Normaliza a cidade buscada removendo os acentos
-    const cidadeBuscadaNormalizada = cidadeBuscada.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase();
-    
-    // Filtra o JSON pelas cidades que contêm o trecho buscado, desconsiderando os acentos
-    const resultado = json.filter(item => 
-      item.cidade.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase().includes(cidadeBuscadaNormalizada)
-    );
-  
+    const cidadeBuscadaNormalizada = cidadeBuscada
+        .normalize("NFD")
+        .replace(/[\u0300-\u036f]/g, "")
+        .toLowerCase();
+
+    // Filtra as listas onde a cidade (índice 1) contém o trecho buscado
+    const resultado = dados.filter(item => {
+        const cidade = item[1]; // cidade está no índice 1
+        const cidadeNormalizada = cidade
+            .normalize("NFD")
+            .replace(/[\u0300-\u036f]/g, "")
+            .toLowerCase();
+
+        return cidadeNormalizada.includes(cidadeBuscadaNormalizada);
+    });
+
     return resultado;
 }
 
@@ -83,7 +91,7 @@ const msgConfirmacao = async (msg) => {
         confirmButtonText: "Confirmar",
         denyButtonText: "Cancelar",
       });
-  
+
       if (result.isConfirmed) {
         resolve(true);
       } else {
@@ -91,7 +99,7 @@ const msgConfirmacao = async (msg) => {
       }
     });
   };
-  
+
   const msgOk = (msg) => {
     Swal.fire({
       position: "top-end",
@@ -101,10 +109,11 @@ const msgConfirmacao = async (msg) => {
       timer: 1500,
     });
   };
+
   const msgAlerta = (msg) => {
     Swal.fire(msg);
   };
-  
+
   const msgInfo = (dadosMsg) => {
     Swal.fire({
       title: dadosMsg.titulo,
@@ -112,7 +121,7 @@ const msgConfirmacao = async (msg) => {
       icon: "info",
     });
   };
-  
+
   const msgErro = (msg) => {
     Swal.fire({
       position: "top-end",
@@ -122,7 +131,7 @@ const msgConfirmacao = async (msg) => {
       timer: 3000,
     });
   };
-  
+
   const msgErroFixa = (msg) => {
     Swal.fire({
       title: "Erro !",
@@ -130,7 +139,7 @@ const msgConfirmacao = async (msg) => {
       icon: "error",
     });
   };
-  
+
   const msgAviso = (msg) => {
     Swal.fire({
       position: "top-end",
@@ -143,7 +152,7 @@ const msgConfirmacao = async (msg) => {
 
   /**
  * Separa os componentes da chave de acesso de uma Nota Fiscal Eletrônica (NF-e).
- * 
+ *
  * A chave de acesso é composta por 44 dígitos numéricos com a seguinte estrutura:
  * 1-2     - UF
  * 3-4     - Ano e Mês de emissão
@@ -152,11 +161,11 @@ const msgConfirmacao = async (msg) => {
  * 23-34   - Código numérico e dígito verificador
  * 35-43   - Tipo de emissão e data de emissão
  * 44      - Dígito verificador geral
- * 
+ *
  * @param {string} chave - Chave de acesso completa da NF-e (44 caracteres numéricos)
  * @returns {Object} Objeto com os componentes separados da chave de acesso
  * @throws {Error} Se a chave não tiver exatamente 44 caracteres numéricos
- * 
+ *
  * @example
  * const chave = '43171207364617000135550000000120141000120140';
  * const componentes = separarChaveNFe(chave);
@@ -228,4 +237,70 @@ function hideLoaderSweet() {
     Swal.close();
 }
 
+/**
+ * Popula um select box HTML com opções fornecidas.
+ *
+ * @param {string} idSelect - O ID do elemento select.
+ * @param {Array} value - Array de objetos com as propriedades 'value' e 'text'.
+ */
+const populaSelect = (idSelect, value) => {
+  const select = document.getElementById(idSelect);
+  if (!select) {
+    console.warn(`Elemento com ID "${idSelect}" não encontrado.`);
+    return;
+  }
 
+  // Limpa as opções existentes
+  select.innerHTML = '';
+
+  // Cria e adiciona as novas opções
+  value.forEach(item => {
+    const option = document.createElement('option');
+    option.value = item.value;
+    option.text = item.text;
+    select.appendChild(option);
+  });
+};
+
+/**
+ * Seleciona um valor em um select box HTML, se estiver presente.
+ *
+ * @param {string} idSelect - O ID do elemento select.
+ * @param {string} valor - O valor a ser selecionado.
+ */
+const selecionaValorSelect = (idSelect, valor) => {
+  const select = document.getElementById(idSelect);
+  if (!select) {
+    console.warn(`Elemento com ID "${idSelect}" não encontrado.`);
+    return;
+  }
+
+  const optionExiste = Array.from(select.options).some(opt => opt.value === valor);
+  if (optionExiste) {
+    select.value = valor;
+  } else {
+    console.warn(`Valor "${valor}" não encontrado no select "${idSelect}".`);
+  }
+};
+
+/**
+ * Retorna o value e o texto da opção selecionada em um select box.
+ *
+ * @param {string} idSelect - O ID do elemento select.
+ * @returns {{ value: string, text: string } | null} - Objeto com value e text, ou null se não encontrado.
+ */
+const obterOpcaoSelecionada = (idSelect) => {
+  const select = document.getElementById(idSelect);
+  if (!select) {
+    console.warn(`Elemento com ID "${idSelect}" não encontrado.`);
+    return null;
+  }
+
+  const selectedOption = select.options[select.selectedIndex];
+  if (!selectedOption) return null;
+
+  return {
+    value: selectedOption.value,
+    text: selectedOption.text
+  };
+};

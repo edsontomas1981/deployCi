@@ -34,7 +34,7 @@ const limpaForm = ()=>{
     let rota = document.getElementById('rota')
     let idCi = document.getElementById('idCiNum')
     let ciNum = document.getElementById('ciNum')
-    
+
     isca1.value = ''
     isca2.value = ''
     manifesto.value = ''
@@ -110,7 +110,7 @@ const imprimirCi = async(element)=>{
       .catch(error => console.error('Error:', error));
     }
   });
-} 
+}
 
 
 
@@ -170,14 +170,15 @@ const carregaTbody = async ()=>{
         classe: "btn btn-primary text-white btn-table",
         texto: '<i class="fa fa-search" aria-hidden="true"></i>',
         callback: handlerBuscaCi
-        }          
-      }; 
+        }
+      };
 
       // Obter todas as comunicações
       var dados = await apiService.getAll('comunicacoes')
       .then(data => transformarEmListaDeListas(data))
       .catch(error => console.error('Error:', error))
 
+      console.log(dados)
       popula_tbody_paginacao('paginacao','dadosCi',dados,botoes,1,20,false)
 
   }
@@ -209,7 +210,6 @@ document.addEventListener('DOMContentLoaded',()=>{
       placement: 'top', // Posição do tooltip: top, bottom, left, right
       animation: 'fade', // Tipo de animação
       theme: 'light', // Tema personalizado (opcional)
-    }); 
+    });
     carregaTbody()
 })
-

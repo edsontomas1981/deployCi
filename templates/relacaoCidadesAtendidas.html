@@ -30,6 +30,10 @@
   <!-- Sweet Alert -->
   <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
 
+	<!-- SheetJS -->
+	<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+
+
   <!-- Tippy.js -->
   <link rel="stylesheet" href="https://unpkg.com/tippy.js@6/dist/tippy.css">
   <script src="https://unpkg.com/popper.js@1"></script>
@@ -54,21 +58,42 @@
       <div class="content">
         <div class="container-fluid">
           <h4 class="page-title">Cidades Atendidas</h4>
+					<div class="row">
+						<div class="col-sm-6 mt-4 mb-4">
+							<div class="form-floating mb-3">
+								<input type="text" class="form-control" id="inptBuscaCidade" placeholder="Digite o nome completo ou parte do nome da cidade">
+								<label for="inptBuscaCidade">Digite o nome completo ou parte do nome da cidade</label>
+							</div>
+						</div>
 
-          <div class="col-sm-12 mt-4 mb-4">
-            <div class="form-floating mb-3">
-              <input type="text" class="form-control" id="inptBuscaCidade" placeholder="Digite o nome completo ou parte do nome da cidade">
-              <label for="inptBuscaCidade">Digite o nome completo ou parte do nome da cidade</label>
-            </div>
-          </div>
-      
+						<div class="col-sm-2 mt-4 mb-4 d-flex justify-content-center">
+							<a class="btn btn-info fw-bolder" id="btnCadastrarCidade" style="height:55px; display: flex; align-items: center; justify-content: center;">
+							  Cadastrar Cidade
+							</a>
+						</div>
+
+						<div class="col-sm-2 mt-4 mb-4 d-flex justify-content-center">
+							<a class="btn btn-warning fw-bolder" id="btnGerarPDF" style="height:55px; display: flex; align-items: center; justify-content: center;">
+							  Gerar PDF
+							</a>
+						</div>
+
+						<div class="col-sm-2 mt-4 mb-4 d-flex justify-content-center">
+							<a class="btn btn-success fw-bolder" id="btnGerarXLS" style="height:55px; display: flex; align-items: center; justify-content: center;">
+								Exportar Excel
+								</a>
+						</div>
+
+   				</div>
+
           <div id="navCidadesAtendidas">
           </div>
-      
+
           <div class="sol-sm-12">
             <table class="table table-sm table-striped ">
               <thead>
                 <tr>
+                  <th scope="col">Id</th>
                   <th scope="col">Cidade</th>
                   <th scope="col">Filial Destino</th>
                 </tr>
@@ -81,15 +106,60 @@
       </div>
     </div>
   </div>
+
+    <!-- Modal Alteração -->
+    <div class="modal fade" id="modalEditaCidade" tabindex="-1" aria-labelledby="modalBuscaAvancadaLabel" aria-hidden="true">
+      <div class="modal-dialog modal-xl">
+        <div class="modal-content">
+          <div class="modal-header">
+            <h5 class="modal-title" id="modalBuscaAvancadaLabel">Cidades Atendidas</h5>
+            <button type="button" class="btn-close" onclick="closeModal()"></button>
+          </div>
+          <div class="modal-body">
+            <div class="form-floating">
+              <div class="row">
+								<input type="hidden" id="idCidade">
+                <div class="col-sm-6 form-floating">
+                  <input type="text" class="form-control" id="cidade" placeholder="Buscar ...">
+                  <label for="termoObs">Cidade</label>
+                </div>
+                <div class="col-sm-6 form-floating mb-3">
+									<select class="form-select" id="filial" aria-label="Floating label select example">
+								    <option selected>Selecione a filial responsável</option>
+								    <option value="TERESINA">TERESINA</option>
+								    <option value="PICOS">PICOS</option>
+								    <option value="BACABAL">BACABAL</option>
+								    <option value="SÃO LUÍS">SÃO LUÍS</option>
+								  </select>
+								  <label for="floatingSelect">Filial Responsável</label>
+                </div>
+								<div class="modal-footer">
+									<button type="button" class="btn btn-primary" id="btnSalvar">Salvar</button>
+									<button type="button" class="btn btn-danger" onclick="closeModal()">Sair</button>
+								</div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
   <script>
+
+
     document.addEventListener('DOMContentLoaded', ()=>{
         renderizaSidebar('sidebar')
     });
   </script>
+
+
 </body>
 <script src="{{ url_for('static', filename='assets/js/core/jquery.3.2.1.min.js') }}"></script>
 
 <script src="{{ url_for('static', filename='js/populaTbody.js') }}"></script>
+<script src="{{ url_for('static', filename='js/pilhaDeModais.js') }}"></script>
+<script src="{{ url_for('static', filename='js/controleModais.js') }}"></script>
+
+<script src="{{ url_for('static', filename='js/conexao.js') }}"></script>
 <script src="{{ url_for('static', filename='js/utils.js') }}"></script>
 <script src="{{ url_for('static', filename='js/cidadesAtendidas.js') }}"></script>
 <script src="{{ url_for('static', filename='js/renderNavbar.js') }}"></script>

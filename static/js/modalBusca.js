@@ -1,5 +1,5 @@
 document.getElementById('btnPesquisa').addEventListener('click',()=>{
-  
+
     let dados = {}
 
     if (document.getElementById('termoObs').value != ''){
@@ -23,8 +23,16 @@ document.getElementById('btnPesquisa').addEventListener('click',()=>{
     api.search('selecionar_ci', {
         dados
     }).then(result => {
+      if (result.length==1){
+        msgOk(`Foi encontrado ${result.length} registro.`)
+        populaTabelaModal(result);
+        return
+      }
+      msgOk(`Foram encontrados ${result.length} registros.`)
       populaTabelaModal(result);
+      return
     }).catch(error => {
+      msgErro('Nenhuma comunicação encontrada')
         console.error("Erro ao buscar:", error.message);
     });
 })
@@ -48,7 +56,7 @@ const fecharModal = () => {
 
 const handlerDeleteCiModal = async (e)=>{
   buscaCi(e)
-  fecharModal(); 
+  fecharModal();
 }
 
 const populaTabelaModal = (dados)=>{
@@ -62,12 +70,12 @@ const populaTabelaModal = (dados)=>{
         classe: "btn btn-primary text-white",
         texto: '<i class="fa fa-search" aria-hidden="true"></i>',
         callback:handlerDeleteCiModal
-      }         
-    }; 
+      }
+    };
 
     let dadosNormatizados = normalizaDados(dados)
 
-    
+
     popula_tbody_paginacao('paginacaoModal','dadosCiModal',dadosNormatizados,botoes,1,10,false)
 }
 
@@ -93,5 +101,3 @@ const normalizaDados = (dados)=>{
   // Retornar a lista de listas
   return listaDeListas;
 }
-
-

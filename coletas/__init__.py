@@ -1,0 +1,4 @@
+# from coletas.processar_estado_coleta import processar_estado_coletas 
+from coletas.obter_mensagem_pergunta import obter_mensagem_pergunta
+from coletas.campo_atual import get_campo_atual
+

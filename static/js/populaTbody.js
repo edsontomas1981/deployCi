@@ -13,7 +13,7 @@ const truncateString=(str, maxLength)=> {
  * @param {Object} botoes - Um objeto contendo definições de botões personalizados.
  * @param {number} [itensPorPagina=10] - O número de itens a serem exibidos por página (padrão é 10).
  * @returns {HTMLLIElement} - Um elemento li contendo o botão de paginação.
- */
+ */ 
 const createPaginationButton = (iconClass, page, totalPages, isActive = false, divParaNavegacao, idTbody, dados, botoes,itensPorPagina = 10) => {
   const li = document.createElement("li");
   li.className = `page-item ${isActive ? "active" : ""}`;
